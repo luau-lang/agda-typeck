@@ -1,0 +1,61 @@
+name: test
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+
+jobs:
+  linux:
+    strategy:
+      matrix:
+        agda: [2.6.2.2]
+        hackageDate: ["2022-04-07"]
+        hackageTime: ["23:06:28"]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/cache@v2
+      with:
+        path: ~/.cabal/store
+        key: "cabal-${{ runner.os }}-${{ matrix.agda }}-${{ matrix.hackageDate }}-${{ matrix.hackageTime }}"
+    - name: install cabal
+      run: sudo apt-get install -y cabal-install
+    - name: cabal update
+      run: cabal v2-update "hackage.haskell.org,${{ matrix.hackageDate }}T${{ matrix.hackageTime }}Z"
+    - name: cabal install
+      run: |
+        cabal install --lib scientific vector aeson --package-env .
+        cabal install --allow-newer Agda-${{ matrix.agda }}
+    - name: check targets
+      run: |
+        ~/.cabal/bin/agda Everything.agda
+    - name: build executables
+      run: |
+        ~/.cabal/bin/agda --compile PrettyPrinter.agda
+        ~/.cabal/bin/agda --compile Interpreter.agda
+    - name: clone Luau
+      uses: actions/checkout@v2
+      with:
+        repository: Roblox/luau
+        ref: master
+        path: luau
+    - name: cmake configure
+      run: |
+        mkdir -p build
+        cd build
+        cmake ../luau
+    - name: cmake build luau-ast
+      run: |
+        cmake --build ./build --target Luau.Ast.CLI -j 3
+    - name: run tests
+      run: |
+        mkdir test-failures
+        python tests.py -l ./build/luau-ast --write-diff-failures --diff-failure-location test-failures/
+    - uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: test failures
+        path: test-failures
+        retention-days: 5
