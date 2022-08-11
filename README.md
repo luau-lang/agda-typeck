@@ -1,6 +1,6 @@
-# Prototyping Luau
+# Luau typechecker prototype
 
-![prototyping workflow](https://github.com/Roblox/luau/actions/workflows/prototyping.yml/badge.svg)
+![workflow](https://github.com/luau-lang/agda-typeck/actions/workflows/test.yml/badge.svg)
 
 An experimental prototyping system for the Luau type system. This is
 intended to allow core language features to be tested quickly, without
