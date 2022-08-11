@@ -16,7 +16,7 @@ open import FFI.System.Exit using (exitWith; ExitFailure)
 
 open import Luau.StrictMode.ToString using (warningToStringᴮ)
 open import Luau.Syntax using (Block; yes; maybe; isAnnotatedᴮ)
-open import Luau.Syntax.FromJSON using (blockFromJSON)
+open import Luau.Syntax.FromJSON using (programFromJSON)
 open import Luau.Syntax.ToString using (blockToString; valueToString)
 open import Luau.Run using (run; return; done; error)
 open import Luau.RuntimeError.ToString using (errToStringᴮ)
@@ -37,7 +37,7 @@ runBlock B | nothing = putStrLn ("UNANNOTATED PROGRAM:\n" ++ blockToString B) >>
 runBlock B | just B′ = putStrLn ("ANNOTATED PROGRAM:\n" ++ blockToString B) >> runBlock′ yes B′
 
 runJSON : Value → IO ⊤
-runJSON value with blockFromJSON(value)
+runJSON value with programFromJSON(value)
 runJSON value | (Left err) = putStrLn ("LUAU ERROR: " ++ err) >> exitWith (ExitFailure (pos 1))
 runJSON value | (Right block) = runBlock block
 
