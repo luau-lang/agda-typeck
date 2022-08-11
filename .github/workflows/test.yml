@@ -45,10 +45,10 @@ jobs:
       run: |
         mkdir -p build
         cd build
-        cmake build ../luau
+        cmake ../luau
     - name: cmake build luau-ast
       run: |
-        cmake --build ./build --target Luau.Ast.CLI
+        cmake --build ./build --target Luau.Ast.CLI -j 3
     - name: run tests
       run: |
         mkdir test-failures
