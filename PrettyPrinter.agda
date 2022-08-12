@@ -14,14 +14,14 @@ open import FFI.Data.Text.Encoding using (encodeUtf8)
 open import FFI.System.Exit using (exitWith; ExitFailure)
 
 open import Luau.Syntax using (Block)
-open import Luau.Syntax.FromJSON using (blockFromJSON)
+open import Luau.Syntax.FromJSON using (programFromJSON)
 open import Luau.Syntax.ToString using (blockToString)
 
 runBlock : ∀ {a} → Block a → IO ⊤
 runBlock block = putStrLn (blockToString block)
 
 runJSON : Value → IO ⊤
-runJSON value with blockFromJSON(value)
+runJSON value with programFromJSON(value)
 runJSON value | (Left err) = putStrLn ("Luau error: " ++ err) >> exitWith (ExitFailure (pos 1))
 runJSON value | (Right block) = runBlock block
 

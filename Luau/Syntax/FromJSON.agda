@@ -22,6 +22,7 @@ lokal = fromString "local"
 list = fromString "list"
 name = fromString "name"
 type = fromString "type"
+luauType = fromString "luauType"
 value = fromString "value"
 values = fromString "values"
 vars = fromString "vars"
@@ -30,6 +31,7 @@ left = fromString "left"
 right = fromString "right"
 returnAnnotation = fromString "returnAnnotation"
 types = fromString "types"
+root = fromString "root"
 
 data Lookup : Set where
   _,_ : String → Value → Lookup
@@ -51,6 +53,7 @@ statFromJSON : Value → Either String (Stat maybe)
 statFromObject : Object → Either String (Stat maybe)
 blockFromJSON : Value → Either String (Block maybe)
 blockFromArray : Array → Either String (Block maybe)
+programFromJSON : Value → Either String (Block maybe)
 
 binOpFromJSON (string s) = binOpFromString s
 binOpFromJSON _ = Left "Binary operator not a string"
@@ -71,7 +74,7 @@ binOpFromString s = Left ("'" ++ s ++ "' is not a valid operator")
 varDecFromJSON (object arg) = varDecFromObject arg
 varDecFromJSON _ = Left "VarDec not an object"
 
-varDecFromObject obj with lookup name obj | lookup type obj
+varDecFromObject obj with lookup name obj | lookup luauType obj
 varDecFromObject obj | just (string name) | nothing = Right (var name)
 varDecFromObject obj | just (string name) | just Value.null = Right (var name)
 varDecFromObject obj | just (string name) | just tyValue with typeFromJSON tyValue
@@ -199,3 +202,7 @@ blockFromArray arr | just value | Right S with blockFromArray(tail arr)
 blockFromArray arr | just value | Right S | Left err = Left (err)
 blockFromArray arr | just value | Right S | Right B  = Right (S ∙ B)
    
+programFromJSON (object obj) with lookup root obj
+programFromJSON obj | just block = blockFromJSON block
+programFromJSON (object obj) | nothing = Left "missing root"
+programFromJSON _ = Left "not an object"
