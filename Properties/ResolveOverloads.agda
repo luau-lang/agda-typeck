@@ -4,7 +4,7 @@ module Properties.ResolveOverloads where
 
 open import FFI.Data.Either using (Left; Right)
 open import Luau.ResolveOverloads using (Resolved; src; srcⁿ; resolve; resolveⁿ; resolveᶠ; resolveˢ; target; yes; no)
-open import Luau.Subtyping using (_<:_; _≮:_; Language; ¬Language; witness; scalar; unknown; never; function; function-ok; function-err; function-tgt; function-scalar; function-ok₁; function-ok₂; scalar-scalar; scalar-function; scalar-function-ok; scalar-function-err; scalar-function-tgt; _,_; left; right; _↦_)
+open import Luau.Subtyping using (_<:_; _≮:_; Language; ¬Language; witness; scalar; unknown; never; function; function-ok; function-err; function-tgt; function-scalar; function-ok₁; function-ok₂; scalar-scalar; scalar-function; scalar-function-ok; scalar-function-err; scalar-function-tgt; _,_; left; right; _↦_; ⟨⟩↦)
 open import Luau.Type using (Type ; Scalar; _⇒_; _∩_; _∪_; nil; boolean; number; string; unknown; never)
 open import Luau.TypeSaturation using (saturate)
 open import Luau.TypeNormalization using (normalize)
@@ -119,7 +119,7 @@ unknown-src-≮: r (witness (s ↦ .function) p (function-ok x (scalar-function 
 unknown-src-≮: r (witness (s ↦ .(_ ↦ _)) p (function-ok x (scalar-function-ok ())))
 unknown-src-≮: r (witness (s ↦ .(function-err _)) p (function-ok x (scalar-function-err ())))
 unknown-src-≮: r (witness (function-err t) p (function-err q)) = witness t q (src-¬function-err p)
-unknown-src-≮: r (witness (function-tgt t) p (function-tgt (scalar-function-tgt ())))
+unknown-src-≮: r (witness (⟨⟩↦ t) p (function-tgt (scalar-function-tgt ())))
 
 -- Properties of resolve
 resolveˢ-<:-⇒ : ∀ {F V U} → (FunType F) → (Saturated F) → (FunType (V ⇒ U)) → (r : Resolved F V) → (F <: (V ⇒ U)) → (target r <: U)

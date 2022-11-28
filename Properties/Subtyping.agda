@@ -5,7 +5,7 @@ module Properties.Subtyping where
 open import Agda.Builtin.Equality using (_≡_; refl)
 open import FFI.Data.Either using (Either; Left; Right; mapLR; swapLR; cond)
 open import FFI.Data.Maybe using (Maybe; just; nothing)
-open import Luau.Subtyping using (_<:_; _≮:_; Tree; Language; ¬Language; witness; unknown; never; scalar; function; scalar-function; scalar-function-ok; scalar-function-err; scalar-function-tgt; scalar-scalar; function-scalar; function-ok; function-ok₁; function-ok₂; function-err; function-tgt; left; right; _,_; _↦_ )
+open import Luau.Subtyping using (_<:_; _≮:_; Tree; Language; ¬Language; witness; unknown; never; scalar; function; scalar-function; scalar-function-ok; scalar-function-err; scalar-function-tgt; scalar-scalar; function-scalar; function-ok; function-ok₁; function-ok₂; function-err; function-tgt; left; right; _,_; _↦_; ⟨⟩↦)
 open import Luau.Type using (Type; Scalar; nil; number; string; boolean; never; unknown; _⇒_; _∪_; _∩_; skalar)
 open import Properties.Contradiction using (CONTRADICTION; ¬; ⊥)
 open import Properties.Equality using (_≢_)
@@ -50,11 +50,11 @@ dec-language never t = Left never
 dec-language unknown t = Right unknown
 dec-language (T₁ ∪ T₂) t = cond (λ p → cond (Left ∘ _,_ p) (Right ∘ right) (dec-language T₂ t)) (Right ∘ left) (dec-language T₁ t)
 dec-language (T₁ ∩ T₂) t = cond (Left ∘ left) (λ p → cond (Left ∘ right) (Right ∘ _,_ p) (dec-language T₂ t)) (dec-language T₁ t)
-dec-language nil (function-tgt t) = Left (scalar-function-tgt nil)
-dec-language (T₁ ⇒ T₂) (function-tgt t) = mapLR function-tgt function-tgt (dec-language T₂ t)
-dec-language boolean (function-tgt t) = Left (scalar-function-tgt boolean)
-dec-language number (function-tgt t) = Left (scalar-function-tgt number)
-dec-language string (function-tgt t) = Left (scalar-function-tgt string)
+dec-language nil (⟨⟩↦ t) = Left (scalar-function-tgt nil)
+dec-language (T₁ ⇒ T₂) (⟨⟩↦ t) = mapLR function-tgt function-tgt (dec-language T₂ t)
+dec-language boolean (⟨⟩↦ t) = Left (scalar-function-tgt boolean)
+dec-language number (⟨⟩↦ t) = Left (scalar-function-tgt number)
+dec-language string (⟨⟩↦ t) = Left (scalar-function-tgt string)
 
 -- ¬Language T is the complement of Language T
 language-comp : ∀ {T} t → ¬Language T t → ¬(Language T t)
@@ -70,8 +70,8 @@ language-comp (s ↦ t) (scalar-function-ok ()) (function-ok₁ p)
 language-comp (s ↦ t) (function-ok p₁ p₂) (function-ok₁ q) = language-comp s q p₁
 language-comp (s ↦ t) (function-ok p₁ p₂) (function-ok₂ q) = language-comp t p₂ q
 language-comp (function-err t) (function-err p) (function-err q) = language-comp t q p 
-language-comp (function-tgt t) (scalar-function-tgt ()) (function-tgt q)
-language-comp (function-tgt t) (function-tgt p) (function-tgt q) = language-comp t p q
+language-comp (⟨⟩↦ t) (scalar-function-tgt ()) (function-tgt q)
+language-comp (⟨⟩↦ t) (function-tgt p) (function-tgt q) = language-comp t p q
 
 -- ≮: is the complement of <:
 ¬≮:-impl-<: : ∀ {T U} → ¬(T ≮: U) → (T <: U)
@@ -237,7 +237,7 @@ language-comp (function-tgt t) (function-tgt p) (function-tgt q) = language-comp
 <:-function p q (s ↦ t) (function-ok₁ r) = function-ok₁ (<:-impl-⊇ p s r)
 <:-function p q (s ↦ t) (function-ok₂ r) = function-ok₂ (q t r)
 <:-function p q (function-err s) (function-err r) = function-err (<:-impl-⊇ p s r)
-<:-function p q (function-tgt t) (function-tgt r) = function-tgt (q t r)
+<:-function p q (⟨⟩↦ t) (function-tgt r) = function-tgt (q t r)
 
 <:-function-∩-∩ : ∀ {R S T U} → ((R ⇒ T) ∩ (S ⇒ U)) <: ((R ∩ S) ⇒ (T ∩ U))
 <:-function-∩-∩ function (function , function) = function
@@ -245,7 +245,7 @@ language-comp (function-tgt t) (function-tgt p) (function-tgt q) = language-comp
 <:-function-∩-∩ (s ↦ t) (function-ok₂ p , function-ok₁ q) = function-ok₁ (right q)
 <:-function-∩-∩ (s ↦ t) (function-ok₂ p , function-ok₂ q) = function-ok₂ (p , q)
 <:-function-∩-∩ (function-err s) (function-err p , q) = function-err (left p)
-<:-function-∩-∩ (function-tgt s) (function-tgt p , function-tgt q) = function-tgt (p , q)
+<:-function-∩-∩ (⟨⟩↦ s) (function-tgt p , function-tgt q) = function-tgt (p , q)
 
 <:-function-∩-∪ : ∀ {R S T U} → ((R ⇒ T) ∩ (S ⇒ U)) <: ((R ∪ S) ⇒ (T ∪ U))
 <:-function-∩-∪ function (function , function) = function
@@ -253,7 +253,7 @@ language-comp (function-tgt t) (function-tgt p) (function-tgt q) = language-comp
 <:-function-∩-∪ (s ↦ t) (p₁ , function-ok₂ p₂) = function-ok₂ (right p₂)
 <:-function-∩-∪ (s ↦ t) (function-ok₂ p₁ , p₂) = function-ok₂ (left p₁)
 <:-function-∩-∪ (function-err s) (function-err p₁ , function-err q₂) = function-err (p₁ , q₂)
-<:-function-∩-∪ (function-tgt t) (function-tgt p , q) = function-tgt (left p)
+<:-function-∩-∪ (⟨⟩↦ t) (function-tgt p , q) = function-tgt (left p)
 
 <:-function-∩ : ∀ {S T U} → ((S ⇒ T) ∩ (S ⇒ U)) <: (S ⇒ (T ∩ U))
 <:-function-∩ function (function , function) = function
@@ -261,7 +261,7 @@ language-comp (function-tgt t) (function-tgt p) (function-tgt q) = language-comp
 <:-function-∩ (s ↦ t) (function-ok₁ p₁ , p₂) = function-ok₁ p₁
 <:-function-∩ (s ↦ t) (function-ok₂ p₁ , function-ok₂ p₂) = function-ok₂ (p₁ , p₂)
 <:-function-∩ (function-err s) (function-err p₁ , function-err p₂) = function-err p₂
-<:-function-∩ (function-tgt t) (function-tgt p₁ , function-tgt p₂) = function-tgt (p₁ , p₂)
+<:-function-∩ (⟨⟩↦ t) (function-tgt p₁ , function-tgt p₂) = function-tgt (p₁ , p₂)
 
 <:-function-∪ : ∀ {R S T U} → ((R ⇒ S) ∪ (T ⇒ U)) <: ((R ∩ T) ⇒ (S ∪ U))
 <:-function-∪ function (left function) = function
@@ -274,8 +274,8 @@ language-comp (function-tgt t) (function-tgt p) (function-tgt q) = language-comp
 <:-function-∪ (s ↦ t) (right (function-ok₂ p)) = function-ok₂ (right p)
 <:-function-∪ (function-err s) (right (function-err x)) = function-err (right x)
 <:-function-∪ (scalar s) (right (scalar ()))
-<:-function-∪ (function-tgt t) (left (function-tgt p)) = function-tgt (left p)
-<:-function-∪ (function-tgt t) (right (function-tgt p)) = function-tgt (right p)
+<:-function-∪ (⟨⟩↦ t) (left (function-tgt p)) = function-tgt (left p)
+<:-function-∪ (⟨⟩↦ t) (right (function-tgt p)) = function-tgt (right p)
 
 <:-function-∪-∩ : ∀ {R S T U} → ((R ∩ S) ⇒ (T ∪ U)) <: ((R ⇒ T) ∪ (S ⇒ U))
 <:-function-∪-∩ function function = left function
@@ -285,8 +285,8 @@ language-comp (function-tgt t) (function-tgt p) (function-tgt q) = language-comp
 <:-function-∪-∩ (s ↦ t) (function-ok₂ (right p)) = right (function-ok₂ p)
 <:-function-∪-∩ (function-err s) (function-err (left p)) = left (function-err p)
 <:-function-∪-∩ (function-err s) (function-err (right p)) = right (function-err p)
-<:-function-∪-∩ (function-tgt t) (function-tgt (left p)) = left (function-tgt p)
-<:-function-∪-∩ (function-tgt t) (function-tgt (right p)) = right (function-tgt p)
+<:-function-∪-∩ (⟨⟩↦ t) (function-tgt (left p)) = left (function-tgt p)
+<:-function-∪-∩ (⟨⟩↦ t) (function-tgt (right p)) = right (function-tgt p)
 
 <:-function-left : ∀ {R S T U} → (S ⇒ T) <: (R ⇒ U) → (R <: S)
 <:-function-left {R} {S} p s Rs with dec-language S s
@@ -295,14 +295,14 @@ language-comp (function-tgt t) (function-tgt p) (function-tgt q) = language-comp
 <:-function-left p s Rs | Left ¬Ss | function-err ¬Rs = CONTRADICTION (language-comp s ¬Rs Rs)
 
 <:-function-right : ∀ {R S T U} → (S ⇒ T) <: (R ⇒ U) → (T <: U)
-<:-function-right p t Tt with p (function-tgt t) (function-tgt Tt)
+<:-function-right p t Tt with p (⟨⟩↦ t) (function-tgt Tt)
 <:-function-right p t Tt | function-tgt St = St
 
 ≮:-function-left : ∀ {R S T U} → (R ≮: S) → (S ⇒ T) ≮: (R ⇒ U)
 ≮:-function-left (witness t p q) = witness (function-err t) (function-err q) (function-err p)
 
 ≮:-function-right : ∀ {R S T U} → (T ≮: U) → (S ⇒ T) ≮: (R ⇒ U)
-≮:-function-right (witness t p q) = witness (function-tgt t) (function-tgt p) (function-tgt q)
+≮:-function-right (witness t p q) = witness (⟨⟩↦ t) (function-tgt p) (function-tgt q)
 
 -- Properties of scalars
 skalar-function-ok : ∀ {s t} → (¬Language skalar (s ↦ t))
@@ -381,7 +381,7 @@ function-≮:-never = witness function function never
 <:-everything function p = left function
 <:-everything (s ↦ t) p = left (function-ok₁ never)
 <:-everything (function-err s) p = left (function-err never)
-<:-everything (function-tgt t) p = left (function-tgt unknown)
+<:-everything (⟨⟩↦ t) p = left (function-tgt unknown)
 
 -- A Gentle Introduction To Semantic Subtyping (https://www.cduce.org/papers/gentle.pdf)
 -- defines a "set-theoretic" model (sec 2.5)
@@ -468,9 +468,9 @@ not-quite-set-theoretic-only-if {S₁} {T₁} {S₂} {T₂} s₂ S₂s₂ p = r 
   r (s ↦ t) (function-ok₂ T₁t) | Left ¬T₂t | Left ¬S₂s = function-ok₁ ¬S₂s
   r (s ↦ t) (function-ok₂ T₁t) | Left ¬T₂t | Right S₂s = CONTRADICTION (p Q q (s , just t) (Right T₁t) (S₂s , language-comp t ¬T₂t))
   r (s ↦ t) (function-ok₂ T₁t) | Right T₂t = function-ok₂ T₂t
-  r (function-tgt t) (function-tgt T₁t) with dec-language T₂ t
-  r (function-tgt t) (function-tgt T₁t) | Left ¬T₂t = CONTRADICTION (p Q q (s₂ , just t) (Right T₁t) (S₂s₂ , language-comp t ¬T₂t))
-  r (function-tgt t) (function-tgt T₁t) | Right T₂t = function-tgt T₂t
+  r (⟨⟩↦ t) (function-tgt T₁t) with dec-language T₂ t
+  r (⟨⟩↦ t) (function-tgt T₁t) | Left ¬T₂t = CONTRADICTION (p Q q (s₂ , just t) (Right T₁t) (S₂s₂ , language-comp t ¬T₂t))
+  r (⟨⟩↦ t) (function-tgt T₁t) | Right T₂t = function-tgt T₂t
 
 -- A counterexample when the argument type is empty.
 
@@ -478,4 +478,4 @@ set-theoretic-counterexample-one : (∀ Q → Q ⊆ Comp((Language never) ⊗ Co
 set-theoretic-counterexample-one Q q ((scalar s) , u) Qtu (scalar () , p)
 
 set-theoretic-counterexample-two : (never ⇒ number) ≮: (never ⇒ string)
-set-theoretic-counterexample-two = witness (function-tgt (scalar number)) (function-tgt (scalar number)) (function-tgt (scalar-scalar number string (λ ())))
+set-theoretic-counterexample-two = witness (⟨⟩↦ (scalar number)) (function-tgt (scalar number)) (function-tgt (scalar-scalar number string (λ ())))

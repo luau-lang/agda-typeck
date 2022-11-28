@@ -4,7 +4,7 @@ module Properties.DecSubtyping where
 
 open import Agda.Builtin.Equality using (_≡_; refl)
 open import FFI.Data.Either using (Either; Left; Right; mapLR; swapLR; cond)
-open import Luau.Subtyping using (_<:_; _≮:_; Tree; Language; ¬Language; witness; unknown; never; scalar; function; scalar-function; scalar-function-ok; scalar-function-err; scalar-function-tgt; scalar-scalar; function-scalar; function-ok; function-ok₁; function-ok₂; function-err; function-tgt; left; right; _,_; _↦_)
+open import Luau.Subtyping using (_<:_; _≮:_; Tree; Language; ¬Language; witness; unknown; never; scalar; function; scalar-function; scalar-function-ok; scalar-function-err; scalar-function-tgt; scalar-scalar; function-scalar; function-ok; function-ok₁; function-ok₂; function-err; function-tgt; left; right; _,_; _↦_; ⟨⟩↦)
 open import Luau.Type using (Type; Scalar; nil; number; string; boolean; never; unknown; _⇒_; _∪_; _∩_)
 open import Luau.TypeNormalization using (_∪ⁿ_; _∩ⁿ_)
 open import Luau.TypeSaturation using (saturate)
@@ -87,7 +87,7 @@ dec-subtypingˢᶠ {F} {S ⇒ T} Fᶠ (defn sat-∩ sat-∪) (Sⁿ ⇒ Tⁿ) = r
          })
 
     result₀ : LargestSrc F → Either (F ≮: (S ⇒ T)) (F <:ᵒ (S ⇒ T))
-    result₀ (no S₀ T₀ o₀ (witness t T₀t ¬Tt) tgt₀) = Left (witness (function-tgt t) (ov-language Fᶠ (λ o → function-tgt (tgt₀ o t T₀t))) (function-tgt ¬Tt))
+    result₀ (no S₀ T₀ o₀ (witness t T₀t ¬Tt) tgt₀) = Left (witness (⟨⟩↦ t) (ov-language Fᶠ (λ o → function-tgt (tgt₀ o t T₀t))) (function-tgt ¬Tt))
     result₀ (yes S₀ T₀ o₀ T₀<:T src₀) with dec-subtypingⁿ Sⁿ (normal-overload-src Fᶠ o₀)
     result₀ (yes S₀ T₀ o₀ T₀<:T src₀) | Right S<:S₀ = Right λ { here → defn o₀ S<:S₀ T₀<:T }
     result₀ (yes S₀ T₀ o₀ T₀<:T src₀) | Left (witness s Ss ¬S₀s) = Left (result₁ (smallest Fᶠ (λ o → o))) where
