@@ -5,7 +5,7 @@ module Properties.Subtyping where
 open import Agda.Builtin.Equality using (_≡_; refl)
 open import FFI.Data.Either using (Either; Left; Right; mapLR; swapLR; cond)
 open import FFI.Data.Maybe using (Maybe; just; nothing)
-open import Luau.Subtyping using (_<:_; _≮:_; Tree; Language; ¬Language; witness; unknown; never; scalar; function; scalar-function; scalar-function-ok; scalar-function-err; scalar-function-tgt; scalar-scalar; function-scalar; function-ok; function-ok₁; function-ok₂; function-err; function-tgt; left; right; _,_)
+open import Luau.Subtyping using (_<:_; _≮:_; Tree; Language; ¬Language; witness; unknown; never; scalar; function; scalar-function; scalar-function-ok; scalar-function-err; scalar-function-tgt; scalar-scalar; function-scalar; function-ok; function-ok₁; function-ok₂; function-err; function-tgt; left; right; _,_; _↦_ )
 open import Luau.Type using (Type; Scalar; nil; number; string; boolean; never; unknown; _⇒_; _∪_; _∩_; skalar)
 open import Properties.Contradiction using (CONTRADICTION; ¬; ⊥)
 open import Properties.Equality using (_≢_)
@@ -19,32 +19,32 @@ dec-language nil (scalar boolean) = Left (scalar-scalar boolean nil (λ ()))
 dec-language nil (scalar string) = Left (scalar-scalar string nil (λ ()))
 dec-language nil (scalar nil) = Right (scalar nil)
 dec-language nil function = Left (scalar-function nil)
-dec-language nil (function-ok s t) = Left (scalar-function-ok nil)
+dec-language nil (s ↦ t) = Left (scalar-function-ok nil)
 dec-language nil (function-err t) = Left (scalar-function-err nil)
 dec-language boolean (scalar number) = Left (scalar-scalar number boolean (λ ()))
 dec-language boolean (scalar boolean) = Right (scalar boolean)
 dec-language boolean (scalar string) = Left (scalar-scalar string boolean (λ ()))
 dec-language boolean (scalar nil) = Left (scalar-scalar nil boolean (λ ()))
 dec-language boolean function = Left (scalar-function boolean)
-dec-language boolean (function-ok s t) = Left (scalar-function-ok boolean)
+dec-language boolean (s ↦ t) = Left (scalar-function-ok boolean)
 dec-language boolean (function-err t) = Left (scalar-function-err boolean)
 dec-language number (scalar number) = Right (scalar number)
 dec-language number (scalar boolean) = Left (scalar-scalar boolean number (λ ()))
 dec-language number (scalar string) = Left (scalar-scalar string number (λ ()))
 dec-language number (scalar nil) = Left (scalar-scalar nil number (λ ()))
 dec-language number function = Left (scalar-function number)
-dec-language number (function-ok s t) = Left (scalar-function-ok number)
+dec-language number (s ↦ t) = Left (scalar-function-ok number)
 dec-language number (function-err t) = Left (scalar-function-err number)
 dec-language string (scalar number) = Left (scalar-scalar number string (λ ()))
 dec-language string (scalar boolean) = Left (scalar-scalar boolean string (λ ()))
 dec-language string (scalar string) = Right (scalar string)
 dec-language string (scalar nil) = Left (scalar-scalar nil string (λ ()))
 dec-language string function = Left (scalar-function string)
-dec-language string (function-ok s t) = Left (scalar-function-ok string)
+dec-language string (s ↦ t) = Left (scalar-function-ok string)
 dec-language string (function-err t) = Left (scalar-function-err string)
 dec-language (T₁ ⇒ T₂) (scalar s) = Left (function-scalar s)
 dec-language (T₁ ⇒ T₂) function = Right function
-dec-language (T₁ ⇒ T₂) (function-ok s t) = cond (Right ∘ function-ok₁) (λ p → mapLR (function-ok p) function-ok₂ (dec-language T₂ t)) (dec-language T₁ s)
+dec-language (T₁ ⇒ T₂) (s ↦ t) = cond (Right ∘ function-ok₁) (λ p → mapLR (function-ok p) function-ok₂ (dec-language T₂ t)) (dec-language T₁ s)
 dec-language (T₁ ⇒ T₂) (function-err t) = mapLR function-err function-err (swapLR (dec-language T₁ t))
 dec-language never t = Left never
 dec-language unknown t = Right unknown
@@ -66,9 +66,9 @@ language-comp (scalar s) (scalar-scalar s p₁ p₂) (scalar s) = p₂ refl
 language-comp (scalar s) (function-scalar s) (scalar s) = language-comp function (scalar-function s) function
 language-comp (scalar s) never (scalar ())
 language-comp function (scalar-function ()) function
-language-comp (function-ok s t) (scalar-function-ok ()) (function-ok₁ p)
-language-comp (function-ok s t) (function-ok p₁ p₂) (function-ok₁ q) = language-comp s q p₁
-language-comp (function-ok s t) (function-ok p₁ p₂) (function-ok₂ q) = language-comp t p₂ q
+language-comp (s ↦ t) (scalar-function-ok ()) (function-ok₁ p)
+language-comp (s ↦ t) (function-ok p₁ p₂) (function-ok₁ q) = language-comp s q p₁
+language-comp (s ↦ t) (function-ok p₁ p₂) (function-ok₂ q) = language-comp t p₂ q
 language-comp (function-err t) (function-err p) (function-err q) = language-comp t q p 
 language-comp (function-tgt t) (scalar-function-tgt ()) (function-tgt q)
 language-comp (function-tgt t) (function-tgt p) (function-tgt q) = language-comp t p q
@@ -234,44 +234,44 @@ language-comp (function-tgt t) (function-tgt p) (function-tgt q) = language-comp
 -- Properties of functions
 <:-function : ∀ {R S T U} → (R <: S) → (T <: U) → (S ⇒ T) <: (R ⇒ U)
 <:-function p q function function = function
-<:-function p q (function-ok s t) (function-ok₁ r) = function-ok₁ (<:-impl-⊇ p s r)
-<:-function p q (function-ok s t) (function-ok₂ r) = function-ok₂ (q t r)
+<:-function p q (s ↦ t) (function-ok₁ r) = function-ok₁ (<:-impl-⊇ p s r)
+<:-function p q (s ↦ t) (function-ok₂ r) = function-ok₂ (q t r)
 <:-function p q (function-err s) (function-err r) = function-err (<:-impl-⊇ p s r)
 <:-function p q (function-tgt t) (function-tgt r) = function-tgt (q t r)
 
 <:-function-∩-∩ : ∀ {R S T U} → ((R ⇒ T) ∩ (S ⇒ U)) <: ((R ∩ S) ⇒ (T ∩ U))
 <:-function-∩-∩ function (function , function) = function
-<:-function-∩-∩ (function-ok s t) (function-ok₁ p , q) = function-ok₁ (left p)
-<:-function-∩-∩ (function-ok s t) (function-ok₂ p , function-ok₁ q) = function-ok₁ (right q)
-<:-function-∩-∩ (function-ok s t) (function-ok₂ p , function-ok₂ q) = function-ok₂ (p , q)
+<:-function-∩-∩ (s ↦ t) (function-ok₁ p , q) = function-ok₁ (left p)
+<:-function-∩-∩ (s ↦ t) (function-ok₂ p , function-ok₁ q) = function-ok₁ (right q)
+<:-function-∩-∩ (s ↦ t) (function-ok₂ p , function-ok₂ q) = function-ok₂ (p , q)
 <:-function-∩-∩ (function-err s) (function-err p , q) = function-err (left p)
 <:-function-∩-∩ (function-tgt s) (function-tgt p , function-tgt q) = function-tgt (p , q)
 
 <:-function-∩-∪ : ∀ {R S T U} → ((R ⇒ T) ∩ (S ⇒ U)) <: ((R ∪ S) ⇒ (T ∪ U))
 <:-function-∩-∪ function (function , function) = function
-<:-function-∩-∪ (function-ok s t) (function-ok₁ p₁ , function-ok₁ p₂) = function-ok₁ (p₁ , p₂)
-<:-function-∩-∪ (function-ok s t) (p₁ , function-ok₂ p₂) = function-ok₂ (right p₂)
-<:-function-∩-∪ (function-ok s t) (function-ok₂ p₁ , p₂) = function-ok₂ (left p₁)
+<:-function-∩-∪ (s ↦ t) (function-ok₁ p₁ , function-ok₁ p₂) = function-ok₁ (p₁ , p₂)
+<:-function-∩-∪ (s ↦ t) (p₁ , function-ok₂ p₂) = function-ok₂ (right p₂)
+<:-function-∩-∪ (s ↦ t) (function-ok₂ p₁ , p₂) = function-ok₂ (left p₁)
 <:-function-∩-∪ (function-err s) (function-err p₁ , function-err q₂) = function-err (p₁ , q₂)
 <:-function-∩-∪ (function-tgt t) (function-tgt p , q) = function-tgt (left p)
 
 <:-function-∩ : ∀ {S T U} → ((S ⇒ T) ∩ (S ⇒ U)) <: (S ⇒ (T ∩ U))
 <:-function-∩ function (function , function) = function
-<:-function-∩ (function-ok s t) (p₁ , function-ok₁ p₂) = function-ok₁ p₂
-<:-function-∩ (function-ok s t) (function-ok₁ p₁ , p₂) = function-ok₁ p₁
-<:-function-∩ (function-ok s t) (function-ok₂ p₁ , function-ok₂ p₂) = function-ok₂ (p₁ , p₂)
+<:-function-∩ (s ↦ t) (p₁ , function-ok₁ p₂) = function-ok₁ p₂
+<:-function-∩ (s ↦ t) (function-ok₁ p₁ , p₂) = function-ok₁ p₁
+<:-function-∩ (s ↦ t) (function-ok₂ p₁ , function-ok₂ p₂) = function-ok₂ (p₁ , p₂)
 <:-function-∩ (function-err s) (function-err p₁ , function-err p₂) = function-err p₂
 <:-function-∩ (function-tgt t) (function-tgt p₁ , function-tgt p₂) = function-tgt (p₁ , p₂)
 
 <:-function-∪ : ∀ {R S T U} → ((R ⇒ S) ∪ (T ⇒ U)) <: ((R ∩ T) ⇒ (S ∪ U))
 <:-function-∪ function (left function) = function
-<:-function-∪ (function-ok s t) (left (function-ok₁ p)) = function-ok₁ (left p)
-<:-function-∪ (function-ok s t) (left (function-ok₂ p)) = function-ok₂ (left p)
+<:-function-∪ (s ↦ t) (left (function-ok₁ p)) = function-ok₁ (left p)
+<:-function-∪ (s ↦ t) (left (function-ok₂ p)) = function-ok₂ (left p)
 <:-function-∪ (function-err s) (left (function-err p)) = function-err (left p)
 <:-function-∪ (scalar s) (left (scalar ()))
 <:-function-∪ function (right function) = function
-<:-function-∪ (function-ok s t) (right (function-ok₁ p)) = function-ok₁ (right p)
-<:-function-∪ (function-ok s t) (right (function-ok₂ p)) = function-ok₂ (right p)
+<:-function-∪ (s ↦ t) (right (function-ok₁ p)) = function-ok₁ (right p)
+<:-function-∪ (s ↦ t) (right (function-ok₂ p)) = function-ok₂ (right p)
 <:-function-∪ (function-err s) (right (function-err x)) = function-err (right x)
 <:-function-∪ (scalar s) (right (scalar ()))
 <:-function-∪ (function-tgt t) (left (function-tgt p)) = function-tgt (left p)
@@ -279,10 +279,10 @@ language-comp (function-tgt t) (function-tgt p) (function-tgt q) = language-comp
 
 <:-function-∪-∩ : ∀ {R S T U} → ((R ∩ S) ⇒ (T ∪ U)) <: ((R ⇒ T) ∪ (S ⇒ U))
 <:-function-∪-∩ function function = left function
-<:-function-∪-∩ (function-ok s t) (function-ok₁ (left p)) = left (function-ok₁ p)
-<:-function-∪-∩ (function-ok s t) (function-ok₂ (left p)) = left (function-ok₂ p)
-<:-function-∪-∩ (function-ok s t) (function-ok₁ (right p)) = right (function-ok₁ p)
-<:-function-∪-∩ (function-ok s t) (function-ok₂ (right p)) = right (function-ok₂ p)
+<:-function-∪-∩ (s ↦ t) (function-ok₁ (left p)) = left (function-ok₁ p)
+<:-function-∪-∩ (s ↦ t) (function-ok₂ (left p)) = left (function-ok₂ p)
+<:-function-∪-∩ (s ↦ t) (function-ok₁ (right p)) = right (function-ok₁ p)
+<:-function-∪-∩ (s ↦ t) (function-ok₂ (right p)) = right (function-ok₂ p)
 <:-function-∪-∩ (function-err s) (function-err (left p)) = left (function-err p)
 <:-function-∪-∩ (function-err s) (function-err (right p)) = right (function-err p)
 <:-function-∪-∩ (function-tgt t) (function-tgt (left p)) = left (function-tgt p)
@@ -305,7 +305,7 @@ language-comp (function-tgt t) (function-tgt p) (function-tgt q) = language-comp
 ≮:-function-right (witness t p q) = witness (function-tgt t) (function-tgt p) (function-tgt q)
 
 -- Properties of scalars
-skalar-function-ok : ∀ {s t} → (¬Language skalar (function-ok s t))
+skalar-function-ok : ∀ {s t} → (¬Language skalar (s ↦ t))
 skalar-function-ok = (scalar-function-ok number , (scalar-function-ok string , (scalar-function-ok nil , scalar-function-ok boolean)))
 
 scalar-<: : ∀ {S T} → (s : Scalar S) → Language T (scalar s) → (S <: T)
@@ -379,7 +379,7 @@ function-≮:-never = witness function function never
 <:-everything : unknown <: ((never ⇒ unknown) ∪ skalar)
 <:-everything (scalar s) p = right (skalar-scalar s)
 <:-everything function p = left function
-<:-everything (function-ok s t) p = left (function-ok₁ never)
+<:-everything (s ↦ t) p = left (function-ok₁ never)
 <:-everything (function-err s) p = left (function-err never)
 <:-everything (function-tgt t) p = left (function-tgt unknown)
 
@@ -421,7 +421,7 @@ set-theoretic-if {S₁} {T₁} {S₂} {T₂} p Q q (t , just u) Qtu (S₂t , ¬T
   S₁t | Right r = r
 
   ¬T₁u : ¬(Language T₁ u)
-  ¬T₁u T₁u with p (function-ok t u) (function-ok₂ T₁u)
+  ¬T₁u T₁u with p (t ↦ u) (function-ok₂ T₁u)
   ¬T₁u T₁u | function-ok₁ ¬S₂t = language-comp t ¬S₂t S₂t
   ¬T₁u T₁u | function-ok₂ T₂u = ¬T₂u T₂u
 
@@ -460,14 +460,14 @@ not-quite-set-theoretic-only-if {S₁} {T₁} {S₂} {T₂} s₂ S₂s₂ p = r 
   r (function-err s) (function-err ¬S₁s) with dec-language S₂ s
   r (function-err s) (function-err ¬S₁s) | Left ¬S₂s = function-err ¬S₂s
   r (function-err s) (function-err ¬S₁s) | Right S₂s = CONTRADICTION (p Q q (s , nothing) ¬S₁s (S₂s , λ ()))
-  r (function-ok s t) (function-ok₁ ¬S₁s) with dec-language S₂ s
-  r (function-ok s t) (function-ok₁ ¬S₁s) | Left ¬S₂s = function-ok₁ ¬S₂s
-  r (function-ok s t) (function-ok₁ ¬S₁s) | Right S₂s = CONTRADICTION (p Q q (s , nothing) ¬S₁s (S₂s , λ ()))
-  r (function-ok s t) (function-ok₂ T₁t) with dec-language T₂ t
-  r (function-ok s t) (function-ok₂ T₁t) | Left ¬T₂t with dec-language S₂ s
-  r (function-ok s t) (function-ok₂ T₁t) | Left ¬T₂t | Left ¬S₂s = function-ok₁ ¬S₂s
-  r (function-ok s t) (function-ok₂ T₁t) | Left ¬T₂t | Right S₂s = CONTRADICTION (p Q q (s , just t) (Right T₁t) (S₂s , language-comp t ¬T₂t))
-  r (function-ok s t) (function-ok₂ T₁t) | Right T₂t = function-ok₂ T₂t
+  r (s ↦ t) (function-ok₁ ¬S₁s) with dec-language S₂ s
+  r (s ↦ t) (function-ok₁ ¬S₁s) | Left ¬S₂s = function-ok₁ ¬S₂s
+  r (s ↦ t) (function-ok₁ ¬S₁s) | Right S₂s = CONTRADICTION (p Q q (s , nothing) ¬S₁s (S₂s , λ ()))
+  r (s ↦ t) (function-ok₂ T₁t) with dec-language T₂ t
+  r (s ↦ t) (function-ok₂ T₁t) | Left ¬T₂t with dec-language S₂ s
+  r (s ↦ t) (function-ok₂ T₁t) | Left ¬T₂t | Left ¬S₂s = function-ok₁ ¬S₂s
+  r (s ↦ t) (function-ok₂ T₁t) | Left ¬T₂t | Right S₂s = CONTRADICTION (p Q q (s , just t) (Right T₁t) (S₂s , language-comp t ¬T₂t))
+  r (s ↦ t) (function-ok₂ T₁t) | Right T₂t = function-ok₂ T₂t
   r (function-tgt t) (function-tgt T₁t) with dec-language T₂ t
   r (function-tgt t) (function-tgt T₁t) | Left ¬T₂t = CONTRADICTION (p Q q (s₂ , just t) (Right T₁t) (S₂s₂ , language-comp t ¬T₂t))
   r (function-tgt t) (function-tgt T₁t) | Right T₂t = function-tgt T₂t
