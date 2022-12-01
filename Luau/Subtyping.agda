@@ -1,6 +1,6 @@
 {-# OPTIONS --rewriting #-}
 
-open import Luau.Type using (Type; Scalar; nil; number; string; boolean; error; never; any; _⇒_; _∪_; _∩_)
+open import Luau.Type using (Type; Scalar; nil; number; string; boolean; scalar; error; never; any; _⇒_; _∪_; _∩_)
 open import Properties.Equality using (_≢_)
 
 module Luau.Subtyping where
@@ -15,7 +15,7 @@ data SResult : Set
 
 data SValue where
 
-  scalar : ∀ {T} → Scalar T → SValue
+  scalar : Scalar → SValue
   _↦_ : SValues → SResult → SValue
 
 data SValues where
@@ -43,7 +43,7 @@ data ¬Language : Type → LValue → Set
 
 data Language where
 
-  scalar : ∀ {T} → (s : Scalar T) → Language T ⟨ scalar s ⟩
+  scalar : ∀ T → Language (scalar T) ⟨ scalar T ⟩
   function-nok : ∀ {T U t u} → (¬Language T ⟨ t ⟩) → Language (T ⇒ U) ⟨ ⟨ t ⟩ ↦ u ⟩
   function-nerror : ∀ {T U} → (¬Language T error) → Language (T ⇒ U) ⟨ ⟨⟩ ↦ warning ⟩
   function-ok : ∀ {T U t u} → (Language U ⟨ u ⟩) → Language (T ⇒ U) ⟨ t ↦ ⟨ u ⟩ ⟩
@@ -57,10 +57,10 @@ data Language where
 
 data ¬Language where
 
-  scalar-scalar : ∀ {S T} → (s : Scalar S) → (Scalar T) → (S ≢ T) → ¬Language T ⟨ scalar s ⟩
-  scalar-function : ∀ {S t u} → (Scalar S) → ¬Language S ⟨ t ↦ u ⟩
-  scalar-error : ∀ {S} → (Scalar S) → ¬Language S error
-  function-scalar : ∀ {S T U} (s : Scalar S) → ¬Language (T ⇒ U) ⟨ scalar s ⟩
+  scalar-scalar : ∀ S T → (S ≢ T) → ¬Language (scalar T) ⟨ scalar S ⟩
+  scalar-function : ∀ S {t u} → ¬Language (scalar S) ⟨ t ↦ u ⟩
+  scalar-error : ∀ S → ¬Language (scalar S) error
+  function-scalar : ∀ S {T U} → ¬Language (T ⇒ U) ⟨ scalar S ⟩
   function-ok₀ : ∀ {T U u} → (¬Language U ⟨ u ⟩) → ¬Language (T ⇒ U) ⟨ ⟨⟩ ↦ ⟨ u ⟩ ⟩
   function-ok₁ : ∀ {T U t u} → (Language T ⟨ t ⟩) → (¬Language U ⟨ u ⟩) → ¬Language (T ⇒ U) ⟨ ⟨ t ⟩ ↦ ⟨ u ⟩ ⟩
   function-error₀ : ∀ {T U} → (¬Language U error) → ¬Language (T ⇒ U) ⟨ ⟨⟩ ↦ error ⟩

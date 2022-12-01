@@ -6,34 +6,20 @@ open import Agda.Builtin.Equality using (_≡_; refl)
 open import FFI.Data.Either using (Either; Left; Right; mapLR; swapLR; cond)
 open import FFI.Data.Maybe using (Maybe; just; nothing)
 open import Luau.Subtyping using (_<:_; _≮:_; LValue; Language; ¬Language; witness; any; never; scalar; scalar-function; scalar-scalar; scalar-error; function-scalar; function-ok; function-ok₁; function-ok₀; function-error; function-error₀; function-error₁; function-warning₀; function-warning₁; function-nok; function-nerror; function-diverge; left; right; _,_; _↦_; ⟨⟩; ⟨_⟩; error; warning; diverge)
-open import Luau.Type using (Type; Scalar; nil; number; string; boolean; error; never; unknown; _⇒_; _∪_; _∩_; skalar; funktion; any)
+open import Luau.Type using (Type; Scalar; scalar; error; never; unknown; _⇒_; _∪_; _∩_; any; number; string; NIL; NUMBER; STRING; BOOLEAN; _≡ˢ_)
 open import Properties.Contradiction using (CONTRADICTION; ¬; ⊥)
+open import Properties.Dec using (Dec; yes; no)
 open import Properties.Equality using (_≢_)
 open import Properties.Functions using (_∘_)
 open import Properties.Product using (_×_; _,_)
 
 -- Language membership is decidable
 dec-language : ∀ T t → Either (¬Language T t) (Language T t)
-dec-language nil ⟨ scalar number ⟩ = Left (scalar-scalar number nil (λ ()))
-dec-language nil ⟨ scalar boolean ⟩ = Left (scalar-scalar boolean nil (λ ()))
-dec-language nil ⟨ scalar string ⟩ = Left (scalar-scalar string nil (λ ()))
-dec-language nil ⟨ scalar nil ⟩ = Right (scalar nil)
-dec-language nil ⟨ s ↦ t ⟩ = Left (scalar-function nil)
-dec-language boolean ⟨ scalar number ⟩ = Left (scalar-scalar number boolean (λ ()))
-dec-language boolean ⟨ scalar boolean ⟩ = Right (scalar boolean)
-dec-language boolean ⟨ scalar string ⟩ = Left (scalar-scalar string boolean (λ ()))
-dec-language boolean ⟨ scalar nil ⟩ = Left (scalar-scalar nil boolean (λ ()))
-dec-language boolean ⟨ s ↦ t ⟩ = Left (scalar-function boolean)
-dec-language number ⟨ scalar number ⟩ = Right (scalar number)
-dec-language number ⟨ scalar boolean ⟩ = Left (scalar-scalar boolean number (λ ()))
-dec-language number ⟨ scalar string ⟩ = Left (scalar-scalar string number (λ ()))
-dec-language number ⟨ scalar nil ⟩ = Left (scalar-scalar nil number (λ ()))
-dec-language number ⟨ s ↦ t ⟩ = Left (scalar-function number)
-dec-language string ⟨ scalar number ⟩ = Left (scalar-scalar number string (λ ()))
-dec-language string ⟨ scalar boolean ⟩ = Left (scalar-scalar boolean string (λ ()))
-dec-language string ⟨ scalar string ⟩ = Right (scalar string)
-dec-language string ⟨ scalar nil ⟩ = Left (scalar-scalar nil string (λ ()))
-dec-language string ⟨ s ↦ t ⟩ = Left (scalar-function string)
+dec-language (scalar S) error = Left (scalar-error S)
+dec-language (scalar S) ⟨ scalar T ⟩ with T ≡ˢ S 
+dec-language (scalar S) ⟨ scalar T ⟩ | yes refl = Right (scalar S)
+dec-language (scalar S) ⟨ scalar T ⟩ | no p = Left (scalar-scalar T S p)
+dec-language (scalar S) ⟨ s ↦ t ⟩ = Left (scalar-function S)
 dec-language (T₁ ⇒ T₂) ⟨ scalar s ⟩ = Left (function-scalar s)
 dec-language (T₁ ⇒ T₂) ⟨ ⟨ s ⟩ ↦ ⟨ t ⟩ ⟩ = cond (Right ∘ function-nok) (λ p → mapLR (function-ok₁ p) function-ok (dec-language T₂ ⟨ t ⟩)) (dec-language T₁ ⟨ s ⟩)
 dec-language (T₁ ⇒ T₂) ⟨ ⟨ s ⟩ ↦ diverge ⟩ = cond (Right ∘ function-nok) (λ _ → Right function-diverge) (dec-language T₁ ⟨ s ⟩)
@@ -45,11 +31,7 @@ dec-language never t = Left never
 dec-language any t = Right any
 dec-language (T₁ ∪ T₂) t = cond (λ p → mapLR (_,_ p) right (dec-language T₂ t)) (Right ∘ left) (dec-language T₁ t)
 dec-language (T₁ ∩ T₂) t = cond (Left ∘ left) (λ p → cond (Left ∘ right) (Right ∘ _,_ p) (dec-language T₂ t)) (dec-language T₁ t)
-dec-language nil error = Left (scalar-error nil)
 dec-language (T ⇒ T₁) error = Left function-error
-dec-language boolean error = Left (scalar-error boolean)
-dec-language number error = Left (scalar-error number)
-dec-language string error = Left (scalar-error string)
 dec-language error error = Right error
 dec-language error ⟨ t ⟩ = Left error
 dec-language (T₁ ⇒ T₂) ⟨ ⟨⟩ ↦ warning ⟩ = cond (Right ∘ function-nerror) (Left ∘ function-warning₀) (dec-language T₁ error)
@@ -62,9 +44,6 @@ language-comp (p₁ , p₂) (right q) = language-comp p₂ q
 language-comp (left p) (q₁ , q₂) = language-comp p q₁
 language-comp (right p) (q₁ , q₂) = language-comp p q₂
 language-comp (scalar-scalar s p₁ p₂) (scalar s) = p₂ refl
-language-comp never (scalar ())
-language-comp (scalar-function ()) (function-ok p)
-language-comp (scalar-error ()) error
 language-comp (function-ok₀ p) (function-ok q) = language-comp p q
 language-comp (function-ok₁ p₁ p₂) (function-nok q) = language-comp q p₁
 language-comp (function-ok₁ p₁ p₂) (function-ok q) = language-comp p₂ q
@@ -73,7 +52,6 @@ language-comp (function-error₁ p₁ p₂) (function-nok q) = language-comp q p
 language-comp (function-error₁ p₁ p₂) (function-error q) = language-comp p₂ q
 language-comp (function-warning₀ p) (function-nerror q) = language-comp q p
 language-comp (function-warning₁ p) (function-nok q) = language-comp q p
-language-comp error (scalar ())
 
 -- ≮: is the complement of <:
 ¬≮:-impl-<: : ∀ {T U} → ¬(T ≮: U) → (T <: U)
@@ -269,7 +247,6 @@ language-comp error (scalar ())
 
 <:-function-∪ : ∀ {R S T U} → ((R ⇒ S) ∪ (T ⇒ U)) <: ((R ∩ T) ⇒ (S ∪ U))
 <:-function-∪ (left (function-ok p)) = function-ok (left p)
-<:-function-∪ (left (scalar ()))
 <:-function-∪ (left (function-nok p)) = function-nok (left p)
 <:-function-∪ (left (function-error p)) = function-error (left p)
 <:-function-∪ (left function-diverge) = function-diverge
@@ -316,49 +293,29 @@ language-comp error (scalar ())
 ≮:-function-right (witness {⟨ s ⟩} p q) = witness (function-ok p) (function-ok₀ q)
 
 -- Properties of scalars
-skalar-function-ok : ∀ {s t} → (¬Language skalar ⟨ s ↦ t ⟩)
-skalar-function-ok = scalar-function number ,
-                       (scalar-function string ,
-                        (scalar-function nil , scalar-function boolean))
+scalar-<: : ∀ S {T} → Language T ⟨ scalar S ⟩ → (scalar S <: T)
+scalar-<: S p (scalar S) = p
 
-scalar-<: : ∀ {S T} → (s : Scalar S) → Language T ⟨ scalar s ⟩ → (S <: T)
-scalar-<: number p (scalar number) = p
-scalar-<: boolean p (scalar boolean) = p
-scalar-<: string p (scalar string) = p
-scalar-<: nil p (scalar nil) = p
+scalar-∩-function-<:-never : ∀ S {T U} → ((T ⇒ U) ∩ scalar S) <: never
+scalar-∩-function-<:-never S (() , scalar S)
 
-scalar-∩-function-<:-never : ∀ {S T U} → (Scalar S) → ((T ⇒ U) ∩ S) <: never
-scalar-∩-function-<:-never number (() , scalar number)
-scalar-∩-function-<:-never boolean (() , scalar boolean)
-scalar-∩-function-<:-never string (() , scalar string)
-scalar-∩-function-<:-never nil (() , scalar nil)
+function-≮:-scalar : ∀ {S T} U → ((S ⇒ T) ≮: scalar U)
+function-≮:-scalar S = witness (function-diverge {t = ⟨⟩}) (scalar-function S)
 
-function-≮:-scalar : ∀ {S T U} → (Scalar U) → ((S ⇒ T) ≮: U)
-function-≮:-scalar s = witness (function-diverge {t = ⟨⟩}) (scalar-function s)
+scalar-≮:-function : ∀ {S T} U → (scalar U ≮: (S ⇒ T))
+scalar-≮:-function S = witness (scalar S) (function-scalar S)
 
-scalar-≮:-function : ∀ {S T U} → (Scalar U) → (U ≮: (S ⇒ T))
-scalar-≮:-function s = witness (scalar s) (function-scalar s)
+any-≮:-scalar : ∀ U → (any ≮: scalar U)
+any-≮:-scalar s = witness any (scalar-function s {t = ⟨⟩} {u = diverge})
 
-unknown-≮:-scalar : ∀ {U} → (Scalar U) → (unknown ≮: U)
-unknown-≮:-scalar s = witness (left function-diverge) (scalar-function {t = ⟨⟩} {u = diverge} s)
-
-any-≮:-scalar : ∀ {U} → (Scalar U) → (any ≮: U)
-any-≮:-scalar s = witness any (scalar-function {t = ⟨⟩} {u = diverge} s)
-
-scalar-≮:-never : ∀ {U} → (Scalar U) → (U ≮: never)
+scalar-≮:-never : ∀ U → (scalar U ≮: never)
 scalar-≮:-never s = witness (scalar s) never
 
-scalar-≢-impl-≮: : ∀ {T U} → (Scalar T) → (Scalar U) → (T ≢ U) → (T ≮: U)
+scalar-≢-impl-≮: : ∀ T U → (T ≢ U) → (scalar T ≮: scalar U)
 scalar-≢-impl-≮: s₁ s₂ p = witness (scalar s₁) (scalar-scalar s₁ s₂ p)
 
-scalar-≢-∩-<:-never : ∀ {T U V} → (Scalar T) → (Scalar U) → (T ≢ U) → (T ∩ U) <: V
+scalar-≢-∩-<:-never : ∀ T U {V} → (T ≢ U) → (scalar T ∩ scalar U) <: V
 scalar-≢-∩-<:-never s t p (scalar s₁ , scalar s₂) = CONTRADICTION (p refl)
-
-skalar-scalar : ∀ {T} (s : Scalar T) → (Language skalar ⟨ scalar s ⟩)
-skalar-scalar number = left (scalar number)
-skalar-scalar boolean = right (right (right (scalar boolean)))
-skalar-scalar string = right (left (scalar string))
-skalar-scalar nil = right (right (left (scalar nil)))
 
 -- Properties of any and never
 any-≮: : ∀ {T U} → (T ≮: U) → (any ≮: U)
@@ -368,16 +325,16 @@ never-≮: : ∀ {T U} → (T ≮: U) → (T ≮: never)
 never-≮: (witness p q) = witness p never
 
 any-≮:-never : (any ≮: never)
-any-≮:-never = witness {t = ⟨ scalar nil ⟩} any never
+any-≮:-never = witness {t = ⟨ scalar NIL ⟩} any never
 
 any-≮:-function : ∀ {S T} → (any ≮: (S ⇒ T))
-any-≮:-function = witness any (function-scalar nil)
+any-≮:-function = witness any (function-scalar NIL)
 
 function-≮:-never : ∀ {T U} → ((T ⇒ U) ≮: never)
 function-≮:-never = witness (function-diverge {t = ⟨⟩}) never
 
 <:-never : ∀ {T} → (never <: T)
-<:-never (scalar ())
+<:-never ()
 
 ≮:-never-left : ∀ {S T U} → (S <: (T ∪ U)) → (S ≮: T) → (S ∩ U) ≮: never
 ≮:-never-left p (witness q₁ q₂) with p q₁
@@ -392,14 +349,17 @@ function-≮:-never = witness (function-diverge {t = ⟨⟩}) never
 <:-any : ∀ {T} → (T <: any)
 <:-any p = any
 
-<:-everything : any <: (error ∪ unknown)
-<:-everything {⟨ scalar s ⟩} p = right (right (skalar-scalar s))
-<:-everything {⟨ ⟨⟩ ↦ error ⟩} p = right (left (function-error any))
-<:-everything {⟨ ⟨⟩ ↦ warning ⟩} p = right (left (function-nerror never))
-<:-everything {⟨ ⟨⟩ ↦ diverge ⟩} p = right (left function-diverge)
-<:-everything {⟨ ⟨⟩ ↦ ⟨ t ⟩ ⟩} p = right (left (function-ok any))
-<:-everything {⟨ ⟨ s ⟩ ↦ t ⟩} p = right (left (function-nok never))
-<:-everything {error} p = left error
+<:-everything : any <: (unknown ∪ error)
+<:-everything {error} p = right error
+<:-everything {⟨ scalar NUMBER ⟩} p = left (left (left (left (right (scalar NUMBER)))))
+<:-everything {⟨ scalar BOOLEAN ⟩} p = left (right (scalar BOOLEAN))
+<:-everything {⟨ scalar STRING ⟩} p = left (left (left (right (scalar STRING))))
+<:-everything {⟨ scalar NIL ⟩} p = left (left (right (scalar NIL)))
+<:-everything {⟨ ⟨⟩ ↦ error ⟩} p = left (left (left (left (left (function-error any)))))
+<:-everything {⟨ ⟨⟩ ↦ warning ⟩} p = left (left (left (left (left (function-nerror never)))))
+<:-everything {⟨ ⟨⟩ ↦ diverge ⟩} p = left (left (left (left (left function-diverge))))
+<:-everything {⟨ ⟨⟩ ↦ ⟨ x ⟩ ⟩} p = left (left (left (left (left (function-ok any)))))
+<:-everything {⟨ ⟨ s ⟩ ↦ t ⟩} p = left (left (left (left (left (function-nok never)))))
 
 -- A Gentle Introduction To Semantic Subtyping (https://www.cduce.org/papers/gentle.pdf)
 -- defines a "set-theoretic" model (sec 2.5)
@@ -479,7 +439,6 @@ not-quite-set-theoretic-only-if {S₁} {T₁} {S₂} {T₂} s₂ S₂s₂ p = r 
   T₁⊆T₂ t T₁t | Right T₂t = T₂t
 
   r : Language (S₁ ⇒ T₁) ⊆ Language (S₂ ⇒ T₂)
-  r ⟨ scalar () ⟩ (scalar ())
   r ⟨ ⟨ s ⟩ ↦ t ⟩ (function-nok ¬S₁s) = function-nok (¬S₁⊆¬S₂ ⟨ s ⟩ ¬S₁s)
   r ⟨ ⟨⟩ ↦ warning ⟩ (function-nerror ¬S₁e) = function-nerror (¬S₁⊆¬S₂ error ¬S₁e)
   r ⟨ s ↦ ⟨ t ⟩ ⟩ (function-ok T₁t) = function-ok (T₁⊆T₂ ⟨ t ⟩ T₁t)
@@ -489,8 +448,8 @@ not-quite-set-theoretic-only-if {S₁} {T₁} {S₂} {T₂} s₂ S₂s₂ p = r 
 -- A counterexample when the argument type is empty.
 
 set-theoretic-counterexample-one : (∀ Q → Q ⊆ Comp((Language never) ⊗ Comp(Lift(Language number))) → Q ⊆ Comp((Language never) ⊗ Comp(Lift(Language string))))
-set-theoretic-counterexample-one Q q (⟨ scalar s ⟩ , u) Qtu (scalar () , p)
+set-theoretic-counterexample-one Q q (⟨ scalar s ⟩ , u) Qtu (() , p)
 
 set-theoretic-counterexample-two : (never ⇒ number) ≮: (never ⇒ string)
-set-theoretic-counterexample-two = witness (function-ok (scalar number))
-                                     (function-ok₀ (scalar-scalar number string (λ ())))
+set-theoretic-counterexample-two = witness (function-ok (scalar NUMBER))
+                                     (function-ok₀ (scalar-scalar NUMBER STRING (λ ())))

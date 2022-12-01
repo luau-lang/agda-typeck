@@ -2,7 +2,7 @@
 
 module Luau.Type.FromJSON where
 
-open import Luau.Type using (Type; nil; _⇒_; _∪_; _∩_; unknown; never; number; string)
+open import Luau.Type using (Type; nil; _⇒_; _∪_; _∩_; unknown; never; number) renaming (string to stryng)
 
 open import Agda.Builtin.List using (List; _∷_; [])
 open import Agda.Builtin.Bool using (true; false)
@@ -46,7 +46,7 @@ typeFromJSON (object o) | just (string "AstTypeReference") | just (string "any")
 typeFromJSON (object o) | just (string "AstTypeReference") | just (string "unknown") = Right unknown
 typeFromJSON (object o) | just (string "AstTypeReference") | just (string "never") = Right never
 typeFromJSON (object o) | just (string "AstTypeReference") | just (string "number") = Right number
-typeFromJSON (object o) | just (string "AstTypeReference") | just (string "string") = Right string
+typeFromJSON (object o) | just (string "AstTypeReference") | just (string "string") = Right stryng
 typeFromJSON (object o) | just (string "AstTypeReference") | _ = Left "Unknown referenced type"
 
 typeFromJSON (object o) | just (string "AstTypeUnion") with lookup types o
