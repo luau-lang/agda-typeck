@@ -1,6 +1,6 @@
 {-# OPTIONS --rewriting #-}
 
-open import Luau.Type using (Type; Scalar; nil; number; string; boolean; error; never; unknown; _⇒_; _∪_; _∩_)
+open import Luau.Type using (Type; Scalar; nil; number; string; boolean; error; never; any; _⇒_; _∪_; _∩_)
 open import Properties.Equality using (_≢_)
 
 module Luau.Subtyping where
@@ -26,8 +26,10 @@ data SValues where
 
 data SResult where
 
-  -- The effects we're tracking is causing a runtime error or diverging
+  -- The effects we're tracking are causing a runtime error, a typecheck warning,
+  -- or diverging
   error : SResult
+  warning : SResult
   diverge : SResult
   ⟨_⟩ : SValue → SResult
 
@@ -43,13 +45,14 @@ data Language where
 
   scalar : ∀ {T} → (s : Scalar T) → Language T ⟨ scalar s ⟩
   function-nok : ∀ {T U t u} → (¬Language T ⟨ t ⟩) → Language (T ⇒ U) ⟨ ⟨ t ⟩ ↦ u ⟩
+  function-nerror : ∀ {T U} → (¬Language T error) → Language (T ⇒ U) ⟨ ⟨⟩ ↦ warning ⟩
   function-ok : ∀ {T U t u} → (Language U ⟨ u ⟩) → Language (T ⇒ U) ⟨ t ↦ ⟨ u ⟩ ⟩
   function-error : ∀ {T U t} → (Language U error) → Language (T ⇒ U) ⟨ t ↦ error ⟩
   function-diverge : ∀ {T U t} → Language (T ⇒ U) ⟨ t ↦ diverge ⟩
   left : ∀ {T U t} → Language T t → Language (T ∪ U) t
   right : ∀ {T U u} → Language U u → Language (T ∪ U) u
   _,_ : ∀ {T U t} → Language T t → Language U t → Language (T ∩ U) t
-  unknown : ∀ {t} → Language unknown t
+  any : ∀ {t} → Language any t
   error : Language error error
 
 data ¬Language where
@@ -62,6 +65,8 @@ data ¬Language where
   function-ok₁ : ∀ {T U t u} → (Language T ⟨ t ⟩) → (¬Language U ⟨ u ⟩) → ¬Language (T ⇒ U) ⟨ ⟨ t ⟩ ↦ ⟨ u ⟩ ⟩
   function-error₀ : ∀ {T U} → (¬Language U error) → ¬Language (T ⇒ U) ⟨ ⟨⟩ ↦ error ⟩
   function-error₁ : ∀ {T U t} → (Language T ⟨ t ⟩) → (¬Language U error) → ¬Language (T ⇒ U) ⟨ ⟨ t ⟩ ↦ error ⟩
+  function-warning₀ : ∀ {T U} → (Language T error) → ¬Language (T ⇒ U) ⟨ ⟨⟩ ↦ warning ⟩
+  function-warning₁ : ∀ {T U t} → (Language T ⟨ t ⟩) → ¬Language (T ⇒ U) ⟨ ⟨ t ⟩ ↦ warning ⟩
   function-error : ∀ {T U} → ¬Language (T ⇒ U) error
   _,_ : ∀ {T U t} → ¬Language T t → ¬Language U t → ¬Language (T ∪ U) t
   left : ∀ {T U t} → ¬Language T t → ¬Language (T ∩ U) t

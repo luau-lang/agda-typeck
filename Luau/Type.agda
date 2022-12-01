@@ -10,7 +10,7 @@ data Type : Set where
   nil : Type
   _⇒_ : Type → Type → Type
   never : Type
-  unknown : Type
+  any : Type
   boolean : Type
   number : Type
   string : Type
@@ -25,39 +25,27 @@ data Scalar : Type → Set where
   string : Scalar string
   nil : Scalar nil
 
-any = unknown ∪ error
 skalar = number ∪ (string ∪ (nil ∪ boolean))
 funktion = (never ⇒ any)
+unknown = funktion ∪ skalar
 
 lhs : Type → Type
 lhs (T ⇒ _) = T
 lhs (T ∪ _) = T
 lhs (T ∩ _) = T
-lhs nil = nil
-lhs never = never
-lhs unknown = unknown
-lhs number = number
-lhs boolean = boolean
-lhs string = string
-lhs function = function
+lhs T = T
 
 rhs : Type → Type
 rhs (_ ⇒ T) = T
 rhs (_ ∪ T) = T
 rhs (_ ∩ T) = T
-rhs nil = nil
-rhs never = never
-rhs unknown = unknown
-rhs number = number
-rhs boolean = boolean
-rhs string = string
-rhs function = function
+rhs T = T
 
 _≡ᵀ_ : ∀ (T U : Type) → Dec(T ≡ U)
 nil ≡ᵀ nil = yes refl
 nil ≡ᵀ (S ⇒ T) = no (λ ())
 nil ≡ᵀ never = no (λ ())
-nil ≡ᵀ unknown = no (λ ())
+nil ≡ᵀ any = no (λ ())
 nil ≡ᵀ number = no (λ ())
 nil ≡ᵀ boolean = no (λ ())
 nil ≡ᵀ (S ∪ T) = no (λ ())
@@ -65,7 +53,7 @@ nil ≡ᵀ (S ∩ T) = no (λ ())
 nil ≡ᵀ string = no (λ ())
 (S ⇒ T) ≡ᵀ string = no (λ ())
 never ≡ᵀ string = no (λ ())
-unknown ≡ᵀ string = no (λ ())
+any ≡ᵀ string = no (λ ())
 boolean ≡ᵀ string = no (λ ())
 number ≡ᵀ string = no (λ ())
 (S ∪ T) ≡ᵀ string = no (λ ())
@@ -76,7 +64,7 @@ number ≡ᵀ string = no (λ ())
 (S ⇒ T) ≡ᵀ (U ⇒ V) | _ | no p = no (λ q → p (cong rhs q))
 (S ⇒ T) ≡ᵀ (U ⇒ V) | no p | _ = no (λ q → p (cong lhs q))
 (S ⇒ T) ≡ᵀ never = no (λ ())
-(S ⇒ T) ≡ᵀ unknown = no (λ ())
+(S ⇒ T) ≡ᵀ any = no (λ ())
 (S ⇒ T) ≡ᵀ number = no (λ ())
 (S ⇒ T) ≡ᵀ boolean = no (λ ())
 (S ⇒ T) ≡ᵀ (U ∪ V) = no (λ ())
@@ -84,23 +72,23 @@ number ≡ᵀ string = no (λ ())
 never ≡ᵀ nil = no (λ ())
 never ≡ᵀ (U ⇒ V) = no (λ ())
 never ≡ᵀ never = yes refl
-never ≡ᵀ unknown = no (λ ())
+never ≡ᵀ any = no (λ ())
 never ≡ᵀ number = no (λ ())
 never ≡ᵀ boolean = no (λ ())
 never ≡ᵀ (U ∪ V) = no (λ ())
 never ≡ᵀ (U ∩ V) = no (λ ())
-unknown ≡ᵀ nil = no (λ ())
-unknown ≡ᵀ (U ⇒ V) = no (λ ())
-unknown ≡ᵀ never = no (λ ())
-unknown ≡ᵀ unknown = yes refl
-unknown ≡ᵀ number = no (λ ())
-unknown ≡ᵀ boolean = no (λ ())
-unknown ≡ᵀ (U ∪ V) = no (λ ())
-unknown ≡ᵀ (U ∩ V) = no (λ ())
+any ≡ᵀ nil = no (λ ())
+any ≡ᵀ (U ⇒ V) = no (λ ())
+any ≡ᵀ never = no (λ ())
+any ≡ᵀ any = yes refl
+any ≡ᵀ number = no (λ ())
+any ≡ᵀ boolean = no (λ ())
+any ≡ᵀ (U ∪ V) = no (λ ())
+any ≡ᵀ (U ∩ V) = no (λ ())
 number ≡ᵀ nil = no (λ ())
 number ≡ᵀ (T ⇒ U) = no (λ ())
 number ≡ᵀ never = no (λ ())
-number ≡ᵀ unknown = no (λ ())
+number ≡ᵀ any = no (λ ())
 number ≡ᵀ number = yes refl
 number ≡ᵀ boolean = no (λ ())
 number ≡ᵀ (T ∪ U) = no (λ ())
@@ -108,7 +96,7 @@ number ≡ᵀ (T ∩ U) = no (λ ())
 boolean ≡ᵀ nil = no (λ ())
 boolean ≡ᵀ (T ⇒ U) = no (λ ())
 boolean ≡ᵀ never = no (λ ())
-boolean ≡ᵀ unknown = no (λ ())
+boolean ≡ᵀ any = no (λ ())
 boolean ≡ᵀ boolean = yes refl
 boolean ≡ᵀ number = no (λ ())
 boolean ≡ᵀ (T ∪ U) = no (λ ())
@@ -116,7 +104,7 @@ boolean ≡ᵀ (T ∩ U) = no (λ ())
 string ≡ᵀ nil = no (λ ())
 string ≡ᵀ (x ⇒ x₁) = no (λ ())
 string ≡ᵀ never = no (λ ())
-string ≡ᵀ unknown = no (λ ())
+string ≡ᵀ any = no (λ ())
 string ≡ᵀ boolean = no (λ ())
 string ≡ᵀ number = no (λ ())
 string ≡ᵀ string = yes refl
@@ -125,7 +113,7 @@ string ≡ᵀ (U ∩ V) = no (λ ())
 (S ∪ T) ≡ᵀ nil = no (λ ())
 (S ∪ T) ≡ᵀ (U ⇒ V) = no (λ ())
 (S ∪ T) ≡ᵀ never = no (λ ())
-(S ∪ T) ≡ᵀ unknown = no (λ ())
+(S ∪ T) ≡ᵀ any = no (λ ())
 (S ∪ T) ≡ᵀ number = no (λ ())
 (S ∪ T) ≡ᵀ boolean = no (λ ())
 (S ∪ T) ≡ᵀ (U ∪ V) with (S ≡ᵀ U) | (T ≡ᵀ V) 
@@ -136,7 +124,7 @@ string ≡ᵀ (U ∩ V) = no (λ ())
 (S ∩ T) ≡ᵀ nil = no (λ ())
 (S ∩ T) ≡ᵀ (U ⇒ V) = no (λ ())
 (S ∩ T) ≡ᵀ never = no (λ ())
-(S ∩ T) ≡ᵀ unknown = no (λ ())
+(S ∩ T) ≡ᵀ any = no (λ ())
 (S ∩ T) ≡ᵀ number = no (λ ())
 (S ∩ T) ≡ᵀ boolean = no (λ ())
 (S ∩ T) ≡ᵀ (U ∪ V) = no (λ ())
@@ -147,14 +135,14 @@ string ≡ᵀ (U ∩ V) = no (λ ())
 nil ≡ᵀ error = no (λ ())
 (S ⇒ T) ≡ᵀ error = no (λ ())
 never ≡ᵀ error = no (λ ())
-unknown ≡ᵀ error = no (λ ())
+any ≡ᵀ error = no (λ ())
 boolean ≡ᵀ error = no (λ ())
 number ≡ᵀ error = no (λ ())
 string ≡ᵀ error = no (λ ())
 error ≡ᵀ nil = no (λ ())
 error ≡ᵀ (U ⇒ V) = no (λ ())
 error ≡ᵀ never = no (λ ())
-error ≡ᵀ unknown = no (λ ())
+error ≡ᵀ any = no (λ ())
 error ≡ᵀ boolean = no (λ ())
 error ≡ᵀ number = no (λ ())
 error ≡ᵀ string = no (λ ())
