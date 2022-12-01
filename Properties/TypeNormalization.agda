@@ -2,8 +2,8 @@
 
 module Properties.TypeNormalization where
 
-open import Luau.Type using (Type; Scalar; nil; number; string; boolean; never; unknown; _⇒_; _∪_; _∩_)
-open import Luau.Subtyping using (Tree; Language; ¬Language; function; scalar; unknown; left; right; function-ok₁; function-ok₂; function-err; function-tgt; scalar-function; scalar-function-ok; scalar-function-err; scalar-function-tgt; function-scalar; _,_)
+open import Luau.Type using (Type; Scalar; nil; number; string; boolean; function; never; unknown; _⇒_; _∪_; _∩_)
+open import Luau.Subtyping using (Tree; Language; ¬Language; function; scalar; unknown; left; right; function-ok₁; function-ok₂; function-diverge; function-tgt; scalar-function; scalar-function-ok; scalar-function-err; scalar-function-tgt; function-scalar; _,_; _↦_; ⟨⟩; ⟨_⟩; error; diverge)
 open import Luau.TypeNormalization using (_∪ⁿ_; _∩ⁿ_; _∪ᶠ_; _∪ⁿˢ_; _∩ⁿˢ_; normalize)
 open import Luau.Subtyping using (_<:_; _≮:_; witness; never)
 open import Properties.Subtyping using (<:-trans; <:-refl; <:-unknown; <:-never; <:-∪-left; <:-∪-right; <:-∪-lub; <:-∩-left; <:-∩-right; <:-∩-glb; <:-∩-symm; <:-function; <:-function-∪-∩; <:-function-∩-∪; <:-function-∪; <:-everything; <:-union; <:-∪-assocl; <:-∪-assocr; <:-∪-symm; <:-intersect;  ∪-distl-∩-<:; ∪-distr-∩-<:; <:-∪-distr-∩; <:-∪-distl-∩; ∩-distl-∪-<:; <:-∩-distl-∪; <:-∩-distr-∪; scalar-∩-function-<:-never; scalar-≢-∩-<:-never)
@@ -20,6 +20,7 @@ data Normal where
   _⇒_ : ∀ {S T} → Normal S → Normal T → Normal (S ⇒ T)
   _∩_ : ∀ {F G} → FunType F → FunType G → Normal (F ∩ G)
   _∪_ : ∀ {S T} → Normal S → Scalar T → Normal (S ∪ T)
+  function : Normal function
   never : Normal never
   unknown : Normal unknown
 
@@ -36,20 +37,18 @@ fun-top (S ⇒ T) = <:-function <:-never <:-unknown
 fun-top (F ∩ G) = <:-trans <:-∩-left (fun-top F)
 
 -- function types are inhabited
-fun-function : ∀ {F} → FunType F → Language F function
-fun-function (S ⇒ T) = function
+fun-function : ∀ {F} → FunType F → Language F (⟨⟩ ↦ diverge)
+fun-function (S ⇒ T) = function-diverge
 fun-function (F ∩ G) = (fun-function F , fun-function G)
 
 fun-≮:-never : ∀ {F} → FunType F → (F ≮: never)
-fun-≮:-never F = witness function (fun-function F) never
+fun-≮:-never F = witness (⟨⟩ ↦ diverge) (fun-function F) never
 
 -- function types aren't scalars
 fun-¬scalar : ∀ {F S t} → (s : Scalar S) → FunType F → Language F t → ¬Language S t
-fun-¬scalar s (S ⇒ T) function = scalar-function s
+fun-¬scalar s (S ⇒ T) function-diverge = scalar-function-ok s
 fun-¬scalar s (S ⇒ T) (function-ok₁ p) = scalar-function-ok s
 fun-¬scalar s (S ⇒ T) (function-ok₂ p) = scalar-function-ok s
-fun-¬scalar s (S ⇒ T) (function-err p) = scalar-function-err s
-fun-¬scalar s (S ⇒ T) (function-tgt p) = scalar-function-tgt s
 fun-¬scalar s (F ∩ G) (p₁ , p₂) = fun-¬scalar s G p₂
 
 ¬scalar-fun : ∀ {F S} → FunType F → (s : Scalar S) → ¬Language F (scalar s)
@@ -78,6 +77,7 @@ normal unknown = unknown
 normal boolean = never ∪ boolean
 normal number = never ∪ number
 normal string = never ∪ string
+normal function = function
 normal (S ∪ T) = normal-∪ⁿ (normal S) (normal T)
 normal (S ∩ T) = normal-∩ⁿ (normal S) (normal T)
 
@@ -89,14 +89,22 @@ normal-∪ⁿ S never = S
 normal-∪ⁿ S unknown = unknown
 normal-∪ⁿ never (T ⇒ U) = T ⇒ U
 normal-∪ⁿ never (G₁ ∩ G₂) = G₁ ∩ G₂
+normal-∪ⁿ never function = function
 normal-∪ⁿ unknown (T ⇒ U) = unknown
 normal-∪ⁿ unknown (G₁ ∩ G₂) = unknown
+normal-∪ⁿ unknown function = unknown
 normal-∪ⁿ (R ⇒ S) (T ⇒ U) = normalᶠ (normal-∪ᶠ (R ⇒ S) (T ⇒ U))
 normal-∪ⁿ (R ⇒ S) (G₁ ∩ G₂) = normalᶠ (normal-∪ᶠ (R ⇒ S) (G₁ ∩ G₂))
+normal-∪ⁿ (R ⇒ S) function = function
 normal-∪ⁿ (F₁ ∩ F₂) (T ⇒ U) = normalᶠ (normal-∪ᶠ (F₁ ∩ F₂) (T ⇒ U))
 normal-∪ⁿ (F₁ ∩ F₂) (G₁ ∩ G₂) = normalᶠ (normal-∪ᶠ (F₁ ∩ F₂) (G₁ ∩ G₂))
+normal-∪ⁿ (F₁ ∩ F₂) function = function
 normal-∪ⁿ (S₁ ∪ S₂) (T₁ ⇒ T₂) = normal-∪ⁿ S₁ (T₁ ⇒ T₂) ∪ S₂
 normal-∪ⁿ (S₁ ∪ S₂) (G₁ ∩ G₂) = normal-∪ⁿ S₁ (G₁ ∩ G₂) ∪ S₂
+normal-∪ⁿ (S₁ ∪ S₂) function = normal-∪ⁿ S₁ function ∪ S₂
+normal-∪ⁿ function (T ⇒ U) = function
+normal-∪ⁿ function (G₁ ∩ G₂) = function
+normal-∪ⁿ function function = function
 
 normal-∩ⁿ S never = never
 normal-∩ⁿ S unknown = S
@@ -111,6 +119,14 @@ normal-∩ⁿ unknown (T ∩ U) = T ∩ U
 normal-∩ⁿ (R ⇒ S) (T ∩ U) = (R ⇒ S) ∩ (T ∩ U)
 normal-∩ⁿ (R ∩ S) (T ∩ U) = (R ∩ S) ∩ (T ∩ U)
 normal-∩ⁿ (R ∪ S) (T ∩ U) = normal-∩ⁿ R (T ∩ U)
+normal-∩ⁿ (R ⇒ S) function = R ⇒ S
+normal-∩ⁿ (R ∩ S) function = R ∩ S
+normal-∩ⁿ (R ∪ S) function = normal-∩ⁿ R function
+normal-∩ⁿ function (T ⇒ U) = T ⇒ U
+normal-∩ⁿ function (T ∩ U) = T ∩ U
+normal-∩ⁿ function function = function
+normal-∩ⁿ never function = never
+normal-∩ⁿ unknown function = function
 
 normal-∪ⁿˢ S never = S
 normal-∪ⁿˢ never number = never ∪ number
@@ -145,6 +161,10 @@ normal-∪ⁿˢ (R ∪ number) nil = normal-∪ⁿˢ R nil ∪ number
 normal-∪ⁿˢ (R ∪ boolean) nil = normal-∪ⁿˢ R nil ∪ boolean
 normal-∪ⁿˢ (R ∪ string) nil = normal-∪ⁿˢ R nil ∪ string
 normal-∪ⁿˢ (R ∪ nil) nil = R ∪ nil
+normal-∪ⁿˢ function number = function ∪ number
+normal-∪ⁿˢ function boolean = function ∪ boolean
+normal-∪ⁿˢ function string = function ∪ string
+normal-∪ⁿˢ function nil = function ∪ nil
 
 normal-∩ⁿˢ never number = never
 normal-∩ⁿˢ never boolean = never
@@ -178,6 +198,7 @@ normal-∩ⁿˢ (R ∪ number) nil = normal-∩ⁿˢ R nil
 normal-∩ⁿˢ (R ∪ boolean) nil = normal-∩ⁿˢ R nil
 normal-∩ⁿˢ (R ∪ string) nil = normal-∩ⁿˢ R nil
 normal-∩ⁿˢ (R ∪ nil) nil = nil
+normal-∩ⁿˢ function T = never
 
 normal-∪ᶠ (R ⇒ S) (T ⇒ U) = (normal-∩ⁿ R T) ⇒ (normal-∪ⁿ S U)
 normal-∪ᶠ (R ⇒ S) (G ∩ H) = normal-∪ᶠ (R ⇒ S) G ∩ normal-∪ᶠ (R ⇒ S) H
@@ -213,6 +234,14 @@ flipper = <:-trans <:-∪-assocr (<:-trans (<:-union <:-refl <:-∪-symm) <:-∪
 ∩-<:-∩ⁿ (R ⇒ S) (T ∩ U) = <:-refl
 ∩-<:-∩ⁿ (R ∩ S) (T ∩ U) = <:-refl
 ∩-<:-∩ⁿ (R ∪ S) (T ∩ U) = <:-trans <:-∩-distr-∪ (<:-trans (<:-union (∩-<:-∩ⁿ R (T ∩ U)) (<:-trans <:-∩-symm (∩-<:-∩ⁿˢ (T ∩ U) S))) (<:-∪-lub <:-refl <:-never))
+∩-<:-∩ⁿ (R ⇒ S) function = {!<:-refl!}
+∩-<:-∩ⁿ (R ∩ S) function = {!!}
+∩-<:-∩ⁿ (R ∪ S) function = {!!}
+∩-<:-∩ⁿ function (T ⇒ U) = {!!}
+∩-<:-∩ⁿ function (T ∩ U) = {!!}
+∩-<:-∩ⁿ function function = {!!}
+∩-<:-∩ⁿ never function = {!!}
+∩-<:-∩ⁿ unknown function = {!!}
 
 ∩ⁿ-<:-∩ S never = <:-never
 ∩ⁿ-<:-∩ S unknown = <:-∩-glb <:-refl <:-unknown

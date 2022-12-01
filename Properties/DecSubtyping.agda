@@ -4,7 +4,7 @@ module Properties.DecSubtyping where
 
 open import Agda.Builtin.Equality using (_≡_; refl)
 open import FFI.Data.Either using (Either; Left; Right; mapLR; swapLR; cond)
-open import Luau.Subtyping using (_<:_; _≮:_; Tree; Language; ¬Language; witness; unknown; never; scalar; function; scalar-function; scalar-function-ok; scalar-function-err; scalar-function-tgt; scalar-scalar; function-scalar; function-ok; function-ok₁; function-ok₂; function-err; function-tgt; left; right; _,_; _↦_; ⟨⟩↦)
+open import Luau.Subtyping using (_<:_; _≮:_; Language; ¬Language; witness; unknown; never; scalar; function; error; scalar-function; scalar-function-ok; scalar-scalar; function-scalar; function-ok; function-ok₁; function-ok₂; function-tgt; function-err₁; left; right; _,_; _↦_; ⟨⟩; ⟨_⟩)
 open import Luau.Type using (Type; Scalar; nil; number; string; boolean; never; unknown; _⇒_; _∪_; _∩_)
 open import Luau.TypeNormalization using (_∪ⁿ_; _∩ⁿ_)
 open import Luau.TypeSaturation using (saturate)
@@ -48,7 +48,7 @@ dec-subtypingˢᶠ {F} {S ⇒ T} Fᶠ (defn sat-∩ sat-∪) (Sⁿ ⇒ Tⁿ) = r
 
   result : Top F → Either (F ≮: (S ⇒ T)) (F <:ᵒ (S ⇒ T))
   result (defn Sᵗ Tᵗ oᵗ srcᵗ) with dec-subtypingⁿ Sⁿ (normal-overload-src Fᶠ oᵗ)
-  result (defn Sᵗ Tᵗ oᵗ srcᵗ) | Left (witness s Ss ¬Sᵗs) = Left (witness (function-err s) (ov-language Fᶠ (λ o → function-err (<:-impl-⊇ (srcᵗ o) s ¬Sᵗs))) (function-err Ss))
+  result (defn Sᵗ Tᵗ oᵗ srcᵗ) | Left (witness s Ss ¬Sᵗs) = Left (witness (⟨ s ⟩ ↦ error) (ov-language Fᶠ (λ o → function-ok₁ (<:-impl-⊇ (srcᵗ o) s ¬Sᵗs))) (function-err₁ Ss))
   result (defn Sᵗ Tᵗ oᵗ srcᵗ) | Right S<:Sᵗ = result₀ (largest Fᶠ (λ o → o)) where
 
     data LargestSrc (G : Type) : Set where
@@ -87,7 +87,7 @@ dec-subtypingˢᶠ {F} {S ⇒ T} Fᶠ (defn sat-∩ sat-∪) (Sⁿ ⇒ Tⁿ) = r
          })
 
     result₀ : LargestSrc F → Either (F ≮: (S ⇒ T)) (F <:ᵒ (S ⇒ T))
-    result₀ (no S₀ T₀ o₀ (witness t T₀t ¬Tt) tgt₀) = Left (witness (⟨⟩↦ t) (ov-language Fᶠ (λ o → function-tgt (tgt₀ o t T₀t))) (function-tgt ¬Tt))
+    result₀ (no S₀ T₀ o₀ (witness t T₀t ¬Tt) tgt₀) = Left (witness (⟨⟩ ↦ ⟨ t ⟩) (ov-language Fᶠ (λ o → function-ok₂ (tgt₀ o t T₀t))) (function-tgt ¬Tt))
     result₀ (yes S₀ T₀ o₀ T₀<:T src₀) with dec-subtypingⁿ Sⁿ (normal-overload-src Fᶠ o₀)
     result₀ (yes S₀ T₀ o₀ T₀<:T src₀) | Right S<:S₀ = Right λ { here → defn o₀ S<:S₀ T₀<:T }
     result₀ (yes S₀ T₀ o₀ T₀<:T src₀) | Left (witness s Ss ¬S₀s) = Left (result₁ (smallest Fᶠ (λ o → o))) where
@@ -116,9 +116,9 @@ dec-subtypingˢᶠ {F} {S ⇒ T} Fᶠ (defn sat-∩ sat-∪) (Sⁿ ⇒ Tⁿ) = r
       result₁ : SmallestTgt F → (F ≮: (S ⇒ T))
       result₁ (defn S₁ T₁ o₁ S₁s tgt₁) with dec-subtypingⁿ (normal-overload-tgt Fᶠ o₁) Tⁿ
       result₁ (defn S₁ T₁ o₁ S₁s tgt₁) | Right T₁<:T = CONTRADICTION (language-comp s ¬S₀s (src₀ o₁ T₁<:T s S₁s))
-      result₁ (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness t T₁t ¬Tt) = witness (s ↦ t) (ov-language Fᶠ lemma) (function-ok Ss ¬Tt) where
+      result₁ (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness t T₁t ¬Tt) = witness (⟨ s ⟩ ↦ ⟨ t ⟩) (ov-language Fᶠ lemma) (function-ok Ss ¬Tt) where
 
-        lemma : ∀ {S′ T′} → Overloads F (S′ ⇒ T′) → Language (S′ ⇒ T′) (s ↦ t)
+        lemma : ∀ {S′ T′} → Overloads F (S′ ⇒ T′) → Language (S′ ⇒ T′) (⟨ s ⟩ ↦ ⟨ t ⟩)
         lemma {S′} o with dec-language S′ s
         lemma {S′} o | Left ¬S′s = function-ok₁ ¬S′s
         lemma {S′} o | Right S′s = function-ok₂ (tgt₁ o S′s t T₁t)
@@ -152,7 +152,7 @@ dec-subtypingⁿ unknown U | Right p₁ | Right p₂ | Right p₃ with dec-subty
 dec-subtypingⁿ unknown U | Right p₁ | Right p₂ | Right p₃ | Left p = Left (<:-trans-≮: <:-unknown p)
 dec-subtypingⁿ unknown U | Right p₁ | Right p₂ | Right p₃ | Right p₄ with dec-subtypingˢⁿ boolean U
 dec-subtypingⁿ unknown U | Right p₁ | Right p₂ | Right p₃ | Right p₄ | Left p = Left (<:-trans-≮: <:-unknown p)
-dec-subtypingⁿ unknown U | Right p₁ | Right p₂ | Right p₃ | Right p₄ | Right p₅ = Right (<:-trans <:-everything (<:-∪-lub p₁ (<:-∪-lub p₂ (<:-∪-lub p₃ (<:-∪-lub p₄ p₅)))))
+dec-subtypingⁿ unknown U | Right p₁ | Right p₂ | Right p₃ | Right p₄ | Right p₅ = {!!} -- Right (<:-trans <:-everything (<:-∪-lub p₁ (<:-∪-lub p₂ (<:-∪-lub p₃ (<:-∪-lub p₄ p₅)))))
 dec-subtypingⁿ (S ⇒ T) U = dec-subtypingᶠⁿ (S ⇒ T) U
 dec-subtypingⁿ (S ∩ T) U = dec-subtypingᶠⁿ (S ∩ T) U
 dec-subtypingⁿ (S ∪ T) U with dec-subtypingⁿ S U | dec-subtypingˢⁿ T U

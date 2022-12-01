@@ -1,7 +1,7 @@
 module Luau.Type.ToString where
 
 open import FFI.Data.String using (String; _++_)
-open import Luau.Type using (Type; nil; _⇒_; never; unknown; number; boolean; string; _∪_; _∩_; normalizeOptional)
+open import Luau.Type using (Type; nil; _⇒_; never; unknown; number; boolean; string; function; _∪_; _∩_; normalizeOptional)
 
 {-# TERMINATING #-}
 typeToString : Type → String
@@ -15,6 +15,7 @@ typeToString unknown = "unknown"
 typeToString number = "number"
 typeToString boolean = "boolean"
 typeToString string = "string"
+typeToString function = "function"
 typeToString (S ∪ T) with normalizeOptional(S ∪ T)
 typeToString (S ∪ T) | ((S′ ⇒ T′) ∪ nil) = "(" ++ typeToString (S′ ⇒ T′) ++ ")?"
 typeToString (S ∪ T) | (S′ ∪ nil) = typeToString S′ ++ "?"

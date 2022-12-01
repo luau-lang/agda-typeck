@@ -14,6 +14,7 @@ data Type : Set where
   boolean : Type
   number : Type
   string : Type
+  error : Type
   _∪_ : Type → Type → Type
   _∩_ : Type → Type → Type
 
@@ -24,7 +25,9 @@ data Scalar : Type → Set where
   string : Scalar string
   nil : Scalar nil
 
+any = unknown ∪ error
 skalar = number ∪ (string ∪ (nil ∪ boolean))
+funktion = (never ⇒ any)
 
 lhs : Type → Type
 lhs (T ⇒ _) = T
@@ -36,6 +39,7 @@ lhs unknown = unknown
 lhs number = number
 lhs boolean = boolean
 lhs string = string
+lhs function = function
 
 rhs : Type → Type
 rhs (_ ⇒ T) = T
@@ -47,6 +51,7 @@ rhs unknown = unknown
 rhs number = number
 rhs boolean = boolean
 rhs string = string
+rhs function = function
 
 _≡ᵀ_ : ∀ (T U : Type) → Dec(T ≡ U)
 nil ≡ᵀ nil = yes refl
@@ -139,6 +144,25 @@ string ≡ᵀ (U ∩ V) = no (λ ())
 (S ∩ T) ≡ᵀ (U ∩ V) | yes refl | yes refl = yes refl
 (S ∩ T) ≡ᵀ (U ∩ V) | _ | no p = no (λ q → p (cong rhs q))
 (S ∩ T) ≡ᵀ (U ∩ V) | no p | _ = no (λ q → p (cong lhs q))
+nil ≡ᵀ error = no (λ ())
+(S ⇒ T) ≡ᵀ error = no (λ ())
+never ≡ᵀ error = no (λ ())
+unknown ≡ᵀ error = no (λ ())
+boolean ≡ᵀ error = no (λ ())
+number ≡ᵀ error = no (λ ())
+string ≡ᵀ error = no (λ ())
+error ≡ᵀ nil = no (λ ())
+error ≡ᵀ (U ⇒ V) = no (λ ())
+error ≡ᵀ never = no (λ ())
+error ≡ᵀ unknown = no (λ ())
+error ≡ᵀ boolean = no (λ ())
+error ≡ᵀ number = no (λ ())
+error ≡ᵀ string = no (λ ())
+error ≡ᵀ error = yes refl
+error ≡ᵀ (U ∪ V) = no (λ ())
+error ≡ᵀ (U ∩ V) = no (λ ())
+(S ∪ T) ≡ᵀ error = no (λ ())
+(S ∩ T) ≡ᵀ error = no (λ ())
 
 _≡ᴹᵀ_ : ∀ (T U : Maybe Type) → Dec(T ≡ U)
 nothing ≡ᴹᵀ nothing = yes refl

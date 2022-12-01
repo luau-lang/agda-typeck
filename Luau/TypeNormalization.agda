@@ -1,6 +1,6 @@
 module Luau.TypeNormalization where
 
-open import Luau.Type using (Type; nil; number; string; boolean; never; unknown; _⇒_; _∪_; _∩_)
+open import Luau.Type using (Type; nil; number; string; boolean; function; never; unknown; _⇒_; _∪_; _∩_)
 
 -- Operations on normalized types
 _∪ᶠ_ : Type → Type → Type
@@ -22,6 +22,8 @@ S ∪ⁿ never = S
 never ∪ⁿ T = T
 unknown ∪ⁿ T = unknown
 (S₁ ∪ S₂) ∪ⁿ G = (S₁ ∪ⁿ G) ∪ S₂
+F ∪ⁿ function = function
+function ∪ⁿ G = function
 F ∪ⁿ G = F ∪ᶠ G
 
 -- Intersection of normalized types
@@ -31,6 +33,8 @@ S ∩ⁿ never = never
 (S₁ ∪ S₂) ∩ⁿ G = (S₁ ∩ⁿ G)
 unknown ∩ⁿ G = G
 never ∩ⁿ G = never
+function ∩ⁿ G = G
+F ∩ⁿ function = F
 F ∩ⁿ G = F ∩ G
 
 -- Intersection of normalized types with a scalar
@@ -61,5 +65,6 @@ normalize unknown = unknown
 normalize boolean = never ∪ boolean
 normalize number = never ∪ number
 normalize string = never ∪ string
+normalize function = function
 normalize (S ∪ T) = normalize S ∪ⁿ normalize T
 normalize (S ∩ T) = normalize S ∩ⁿ normalize T
