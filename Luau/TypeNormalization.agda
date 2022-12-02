@@ -30,17 +30,23 @@ S ∩ⁿ never = never
 never ∩ⁿ G = never
 F ∩ⁿ G = F ∩ G
 
--- Intersection of normalized types with a scalar
+-- Intersection of normalized types with a scalar/error
 (R ∪ scalar S) ∩ⁿˢ (scalar T) with S ≡ˢ T
 (R ∪ scalar S) ∩ⁿˢ (scalar T) | yes p = scalar S
 (R ∪ scalar S) ∩ⁿˢ (scalar T) | no p = R ∩ⁿˢ (scalar T)
+(R ∪ scalar S) ∩ⁿˢ error = R ∩ⁿˢ error
+(R ∪ error) ∩ⁿˢ (scalar T) = R ∩ⁿˢ (scalar T)
+(R ∪ error) ∩ⁿˢ error = error
 F ∩ⁿˢ T = never
 
--- Union of normalized types with an optional scalar
+-- Union of normalized types with an optional scalar/error
 S ∪ⁿˢ never = S
 (R ∪ scalar S) ∪ⁿˢ (scalar T) with S ≡ˢ T
 (R ∪ scalar S) ∪ⁿˢ (scalar T) | yes p = R ∪ scalar S
 (R ∪ scalar S) ∪ⁿˢ (scalar T) | no p = (R ∪ⁿˢ scalar T) ∪ scalar S
+(R ∪ scalar S) ∪ⁿˢ error = (R ∪ⁿˢ error) ∪ scalar S
+(R ∪ error) ∪ⁿˢ (scalar T) = (R ∪ⁿˢ scalar T) ∪ error
+(R ∪ error) ∪ⁿˢ error = R ∪ error
 F ∪ⁿˢ T = F ∪ T
 
 -- Normalize!

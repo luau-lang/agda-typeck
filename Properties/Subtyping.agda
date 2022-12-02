@@ -296,8 +296,14 @@ language-comp (function-warning₁ p) (function-nok q) = language-comp q p
 scalar-<: : ∀ S {T} → Language T ⟨ scalar S ⟩ → (scalar S <: T)
 scalar-<: S p (scalar S) = p
 
-scalar-∩-function-<:-never : ∀ S {T U} → ((T ⇒ U) ∩ scalar S) <: never
-scalar-∩-function-<:-never S (() , scalar S)
+function-∩-scalar-<:-never : ∀ S {T U V} → ((T ⇒ U) ∩ scalar S) <: V
+function-∩-scalar-<:-never S (() , scalar S)
+
+error-∩-scalar-<:-never : ∀ S {V} → (error ∩ scalar S) <: V
+error-∩-scalar-<:-never S (() , scalar S)
+
+scalar-∩-error-<:-never : ∀ S {V} → (scalar S ∩ error) <: V
+scalar-∩-error-<:-never S (() , error)
 
 function-≮:-scalar : ∀ {S T} U → ((S ⇒ T) ≮: scalar U)
 function-≮:-scalar S = witness (function-diverge {t = ⟨⟩}) (scalar-function S)
@@ -316,6 +322,10 @@ scalar-≢-impl-≮: s₁ s₂ p = witness (scalar s₁) (scalar-scalar s₁ s�
 
 scalar-≢-∩-<:-never : ∀ T U {V} → (T ≢ U) → (scalar T ∩ scalar U) <: V
 scalar-≢-∩-<:-never s t p (scalar s₁ , scalar s₂) = CONTRADICTION (p refl)
+
+-- Properties of error
+function-∩-error-<:-never : ∀ {T U V} → ((T ⇒ U) ∩ error) <: V
+function-∩-error-<:-never (() , error)
 
 -- Properties of any and never
 any-≮: : ∀ {T U} → (T ≮: U) → (any ≮: U)
