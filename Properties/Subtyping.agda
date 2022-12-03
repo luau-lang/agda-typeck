@@ -324,6 +324,9 @@ scalar-≢-∩-<:-never : ∀ T U {V} → (T ≢ U) → (scalar T ∩ scalar U) 
 scalar-≢-∩-<:-never s t p (scalar s₁ , scalar s₂) = CONTRADICTION (p refl)
 
 -- Properties of error
+error-<: : ∀ {T} → Language T error → (error <: T)
+error-<: p error = p
+
 function-∩-error-<:-never : ∀ {T U V} → ((T ⇒ U) ∩ error) <: V
 function-∩-error-<:-never (() , error)
 

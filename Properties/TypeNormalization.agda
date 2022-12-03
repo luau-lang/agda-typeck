@@ -62,8 +62,21 @@ fun-¬scalar s (F ∩ G) (p , q) = fun-¬scalar s G q
 scalar-≮:-fun : ∀ {F} → FunType F → ∀ S → scalar S ≮: F
 scalar-≮:-fun F s = witness (scalar s) (¬scalar-fun F s)
 
-any-≮:-fun : ∀ {F} → FunType F → any ≮: F
-any-≮:-fun F = witness any (¬scalar-fun F NIL)
+-- function types aren't errors
+fun-¬error : ∀ {F t} → FunType F → Language F t → ¬Language error t
+fun-¬error (S ⇒ T) (function-nok p) = error
+fun-¬error (S ⇒ T) (function-nerror p) = error
+fun-¬error (S ⇒ T) (function-ok p) = error
+fun-¬error (S ⇒ T) (function-error p) = error
+fun-¬error (S ⇒ T) function-diverge = error
+fun-¬error (F ∩ G) (p , q) = fun-¬error G q
+
+¬error-fun : ∀ {F} → FunType F → ¬Language F error
+¬error-fun (S ⇒ T) = function-error
+¬error-fun (F ∩ G) = left (¬error-fun F)
+
+error-≮:-fun : ∀ {F} → FunType F → error ≮: F
+error-≮:-fun F = witness error (¬error-fun F)
 
 -- unknown is normal
 normal-unknown : Normal unknown
