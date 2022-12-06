@@ -95,21 +95,20 @@ dec-subtypingˢᶠ {F} Fᶠ (defn sat-∩ sat-∪) (S ⇒ T) = result (top Fᶠ 
     result₀ (no S₀ T₀ o₀ (witness {⟨ t ⟩} T₀t ¬Tt) tgt₀) = Left (witness {t = ⟨ ⟨⟩ ↦ ⟨ t ⟩ ⟩} (ov-language Fᶠ (λ o → function-ok (tgt₀ o T₀t))) (function-ok₀ ¬Tt))
     result₀ (yes S₀ T₀ o₀ T₀<:T src₀) with dec-subtyping S S₀
     result₀ (yes S₀ T₀ o₀ T₀<:T src₀) | Right S<:S₀ = Right λ { here → defn o₀ S<:S₀ T₀<:T }
-    result₀ (yes S₀ T₀ o₀ T₀<:T src₀) | Left (witness {error} Ss ¬S₀s) = Left ?
-    result₀ (yes S₀ T₀ o₀ T₀<:T src₀) | Left (witness {⟨ s ⟩} Ss ¬S₀s) = Left (result₁ (smallest Fᶠ (λ o → o))) where
+    result₀ (yes S₀ T₀ o₀ T₀<:T src₀) | Left (witness {s} Ss ¬S₀s) = Left (result₁ s Ss ¬S₀s (smallest Fᶠ (λ o → o))) where
 
-      data SmallestTgt (G : Type) : Set where
+      data SmallestTgt (G : Type) s : Set where
 
         defn : ∀ S₁ T₁ →
 
           Overloads F (S₁ ⇒ T₁) →
-          Language S₁ ⟨ s ⟩ →
-          (∀ {S′ T′} → Overloads G (S′ ⇒ T′) → Language S′ ⟨ s ⟩ → (T₁ <: T′)) →
+          Language S₁ s →
+          (∀ {S′ T′} → Overloads G (S′ ⇒ T′) → Language S′ s → (T₁ <: T′)) →
           -----------------------
-          SmallestTgt G
+          SmallestTgt G s
 
-      smallest : ∀ {G} → (FunType G) → (G ⊆ᵒ F) → SmallestTgt G
-      smallest {S′ ⇒ T′} _ G⊆F with dec-language S′ ⟨ s ⟩
+      smallest : ∀ {G} → (FunType G) → (G ⊆ᵒ F) → SmallestTgt G s
+      smallest {S′ ⇒ T′} _ G⊆F with dec-language S′ s
       smallest {S′ ⇒ T′} _ G⊆F | Left ¬S′s = defn Sᵗ Tᵗ oᵗ (S<:Sᵗ Ss) λ { here S′s → CONTRADICTION (language-comp ¬S′s S′s) }
       smallest {S′ ⇒ T′} _ G⊆F | Right S′s = defn S′ T′ (G⊆F here) S′s (λ { here _ → <:-refl })
       smallest (Gᶠ ∩ Hᶠ) GH⊆F with smallest Gᶠ (GH⊆F ∘ left) | smallest Hᶠ (GH⊆F ∘ right)
@@ -119,17 +118,36 @@ dec-subtypingˢᶠ {F} Fᶠ (defn sat-∩ sat-∪) (S ⇒ T) = result (top Fᶠ 
            ; (right o) S′s → <:-trans (<:-trans tgt <:-∩-right) (tgt₂ o S′s)
            })
 
-      result₁ : SmallestTgt F → (F ≮: (S ⇒ T))
-      result₁ (defn S₁ T₁ o₁ S₁s tgt₁) with dec-subtyping T₁ T
-      result₁ (defn S₁ T₁ o₁ S₁s tgt₁) | Right T₁<:T = CONTRADICTION (language-comp ¬S₀s (src₀ o₁ T₁<:T S₁s))
-      result₁ (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness {error} T₁t ¬Tt) = witness (ov-language Fᶠ lemma) (function-error₁ Ss ¬Tt) where
+      untyped : Luau.Subtyping.SValue
+      foo : ∀ {T U u} → Language T error → ¬Language U ⟨ u ⟩ → ¬Language (T ⇒ U) ⟨ ⟨ untyped ⟩ ↦ ⟨ u ⟩ ⟩
+      baz : ∀ {T U} → Language T error → ¬Language U error → ¬Language (T ⇒ U) ⟨ ⟨ untyped ⟩ ↦ error ⟩
+      bar : ∀ {T U u} → ¬Language T error → Language (T ⇒ U) ⟨ ⟨ untyped ⟩ ↦ u ⟩
+
+      result₁ : ∀ s → Language S s → ¬Language S₀ s → SmallestTgt F s → (F ≮: (S ⇒ T))
+      result₁ s Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) with dec-subtyping T₁ T
+      result₁ s Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) | Right T₁<:T = CONTRADICTION (language-comp ¬S₀s (src₀ o₁ T₁<:T S₁s))
+      result₁ error Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness {error} T₁t ¬Tt) = witness (ov-language Fᶠ lemma) (baz Ss ¬Tt) where
+
+        lemma : ∀ {S′ T′} → Overloads F (S′ ⇒ T′) → Language (S′ ⇒ T′) ⟨ ⟨ untyped ⟩ ↦ error ⟩
+        lemma {S′} {T′} o with dec-language S′ error
+        lemma {S′} {T′} o | Left ¬S′e = bar ¬S′e
+        lemma {S′} {T′} o | Right S′e = function-error (tgt₁ o S′e T₁t)
+
+      result₁ error Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness {⟨ t ⟩} T₁t ¬Tt) = witness (ov-language Fᶠ lemma) (foo Ss ¬Tt) where
+
+        lemma : ∀ {S′ T′} → Overloads F (S′ ⇒ T′) → Language (S′ ⇒ T′) ⟨ ⟨ untyped ⟩ ↦ ⟨ t ⟩ ⟩
+        lemma {S′} {T′} o with dec-language S′ error
+        lemma {S′} {T′} o | Left ¬S′e = bar ¬S′e
+        lemma {S′} {T′} o | Right S′e = function-ok (tgt₁ o S′e T₁t)
+
+      result₁ ⟨ s ⟩ Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness {error} T₁t ¬Tt) = witness (ov-language Fᶠ lemma) (function-error₁ Ss ¬Tt) where
 
         lemma : ∀ {S′ T′} → Overloads F (S′ ⇒ T′) → Language (S′ ⇒ T′) ⟨ ⟨ s ⟩ ↦ error ⟩
         lemma {S′} {T′} o with dec-language S′ ⟨ s ⟩
         lemma {S′} {T′} o | Left ¬S′s = function-nok ¬S′s
         lemma {S′} {T′} o | Right S′s = function-error (tgt₁ o S′s T₁t)
 
-      result₁ (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness {⟨ t ⟩} T₁t ¬Tt) = witness (ov-language Fᶠ lemma) (function-ok₁ Ss ¬Tt) where
+      result₁ ⟨ s ⟩ Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness {⟨ t ⟩} T₁t ¬Tt) = witness (ov-language Fᶠ lemma) (function-ok₁ Ss ¬Tt) where
 
         lemma : ∀ {S′ T′} → Overloads F (S′ ⇒ T′) → Language (S′ ⇒ T′) ⟨ ⟨ s ⟩ ↦ ⟨ t ⟩ ⟩
         lemma {S′} {T′} o with dec-language S′ ⟨ s ⟩
