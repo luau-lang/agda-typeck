@@ -4,7 +4,7 @@ module Properties.DecSubtyping where
 
 open import Agda.Builtin.Equality using (_≡_; refl)
 open import FFI.Data.Either using (Either; Left; Right; mapLR; swapLR; cond)
-open import Luau.Subtyping using (_<:_; _≮:_; Language; ¬Language; witness; any; never; scalar; error; warning; scalar-function; scalar-scalar; function-scalar; function-ok; function-ok₀; function-ok₁; function-nok; function-warning₀; function-warning₁; function-error; function-error₀; function-error₁; function-nerror; left; right; _,_; _↦_; ⟨⟩; ⟨_⟩)
+open import Luau.Subtyping using (_<:_; _≮:_; Language; ¬Language; witness; any; never; scalar; error; warning; scalar-function; scalar-scalar; function-scalar; function-ok; function-nok; function-error; function-warning; function-function; none; one; untyped; left; right; _,_; _↦_; ⟨⟩; ⟨_⟩; ⟨untyped⟩)
 open import Luau.Type using (Type; Scalar; scalar; never; any; _⇒_; _∪_; _∩_)
 open import Luau.TypeNormalization using (_∪ⁿ_; _∩ⁿ_)
 open import Luau.TypeSaturation using (saturate)
@@ -51,8 +51,7 @@ dec-subtypingˢᶠ {F} Fᶠ (defn sat-∩ sat-∪) (S ⇒ T) = result (top Fᶠ 
 
   result : Top F → Either (F ≮: (S ⇒ T)) (F <:ᵒ (S ⇒ T))
   result (defn Sᵗ Tᵗ oᵗ srcᵗ) with dec-subtyping S Sᵗ
-  result (defn Sᵗ Tᵗ oᵗ srcᵗ) | Left (witness {⟨ s ⟩} Ss ¬Sᵗs) = Left (witness {t = ⟨ ⟨ s ⟩ ↦ warning ⟩} (ov-language Fᶠ (λ o → function-nok (<:-impl-⊇ (srcᵗ o) ¬Sᵗs))) (function-warning₁ Ss))
-  result (defn Sᵗ Tᵗ oᵗ srcᵗ) | Left (witness {error} Ss ¬Sᵗs) = Left (witness {t = ⟨ ⟨⟩ ↦ warning ⟩} (ov-language Fᶠ (λ o → function-nerror (<:-impl-⊇ (srcᵗ o) ¬Sᵗs))) (function-warning₀ Ss))
+  result (defn Sᵗ Tᵗ oᵗ srcᵗ) | Left (witness Ss ¬Sᵗs) = Left (witness (ov-language Fᶠ (λ o → function-warning (<:-impl-⊇ (srcᵗ o) ¬Sᵗs))) (function-warning Ss))
   result (defn Sᵗ Tᵗ oᵗ srcᵗ) | Right S<:Sᵗ = result₀ (largest Fᶠ (λ o → o)) where
 
     data LargestSrc (G : Type) : Set where
@@ -91,8 +90,8 @@ dec-subtypingˢᶠ {F} Fᶠ (defn sat-∩ sat-∪) (S ⇒ T) = result (top Fᶠ 
          })
 
     result₀ : LargestSrc F → Either (F ≮: (S ⇒ T)) (F <:ᵒ (S ⇒ T))
-    result₀ (no S₀ T₀ o₀ (witness {error} T₀t ¬Tt) tgt₀) = Left (witness {t = ⟨ ⟨⟩ ↦ error ⟩} (ov-language Fᶠ (λ o → function-error (tgt₀ o T₀t))) (function-error₀ ¬Tt))
-    result₀ (no S₀ T₀ o₀ (witness {⟨ t ⟩} T₀t ¬Tt) tgt₀) = Left (witness {t = ⟨ ⟨⟩ ↦ ⟨ t ⟩ ⟩} (ov-language Fᶠ (λ o → function-ok (tgt₀ o T₀t))) (function-ok₀ ¬Tt))
+    result₀ (no S₀ T₀ o₀ (witness {error} T₀t ¬Tt) tgt₀) = Left (witness {t = ⟨ ⟨⟩ ↦ error ⟩} (ov-language Fᶠ (λ o → function-ok (error (tgt₀ o T₀t)))) (function-function none (error ¬Tt)))
+    result₀ (no S₀ T₀ o₀ (witness {⟨ t ⟩} T₀t ¬Tt) tgt₀) = Left (witness {t = ⟨ ⟨⟩ ↦ ⟨ t ⟩ ⟩} (ov-language Fᶠ (λ o → function-ok (one (tgt₀ o T₀t)))) (function-function none (one ¬Tt)))
     result₀ (yes S₀ T₀ o₀ T₀<:T src₀) with dec-subtyping S S₀
     result₀ (yes S₀ T₀ o₀ T₀<:T src₀) | Right S<:S₀ = Right λ { here → defn o₀ S<:S₀ T₀<:T }
     result₀ (yes S₀ T₀ o₀ T₀<:T src₀) | Left (witness {s} Ss ¬S₀s) = Left (result₁ s Ss ¬S₀s (smallest Fᶠ (λ o → o))) where
@@ -118,41 +117,36 @@ dec-subtypingˢᶠ {F} Fᶠ (defn sat-∩ sat-∪) (S ⇒ T) = result (top Fᶠ 
            ; (right o) S′s → <:-trans (<:-trans tgt <:-∩-right) (tgt₂ o S′s)
            })
 
-      untyped : Luau.Subtyping.SValue
-      foo : ∀ {T U u} → Language T error → ¬Language U ⟨ u ⟩ → ¬Language (T ⇒ U) ⟨ ⟨ untyped ⟩ ↦ ⟨ u ⟩ ⟩
-      baz : ∀ {T U} → Language T error → ¬Language U error → ¬Language (T ⇒ U) ⟨ ⟨ untyped ⟩ ↦ error ⟩
-      bar : ∀ {T U u} → ¬Language T error → Language (T ⇒ U) ⟨ ⟨ untyped ⟩ ↦ u ⟩
-
       result₁ : ∀ s → Language S s → ¬Language S₀ s → SmallestTgt F s → (F ≮: (S ⇒ T))
       result₁ s Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) with dec-subtyping T₁ T
       result₁ s Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) | Right T₁<:T = CONTRADICTION (language-comp ¬S₀s (src₀ o₁ T₁<:T S₁s))
-      result₁ error Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness {error} T₁t ¬Tt) = witness (ov-language Fᶠ lemma) (baz Ss ¬Tt) where
+      result₁ error Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness {error} T₁t ¬Tt) = witness (ov-language Fᶠ lemma) (function-function (untyped Ss) (error ¬Tt)) where
 
-        lemma : ∀ {S′ T′} → Overloads F (S′ ⇒ T′) → Language (S′ ⇒ T′) ⟨ ⟨ untyped ⟩ ↦ error ⟩
+        lemma : ∀ {S′ T′} → Overloads F (S′ ⇒ T′) → Language (S′ ⇒ T′) ⟨ ⟨untyped⟩ ↦ error ⟩
         lemma {S′} {T′} o with dec-language S′ error
-        lemma {S′} {T′} o | Left ¬S′e = bar ¬S′e
-        lemma {S′} {T′} o | Right S′e = function-error (tgt₁ o S′e T₁t)
+        lemma {S′} {T′} o | Left ¬S′e = function-nok (untyped ¬S′e)
+        lemma {S′} {T′} o | Right S′e = function-ok (error (tgt₁ o S′e T₁t))
 
-      result₁ error Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness {⟨ t ⟩} T₁t ¬Tt) = witness (ov-language Fᶠ lemma) (foo Ss ¬Tt) where
+      result₁ error Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness {⟨ t ⟩} T₁t ¬Tt) = witness (ov-language Fᶠ lemma) (function-function (untyped Ss) (one ¬Tt)) where
 
-        lemma : ∀ {S′ T′} → Overloads F (S′ ⇒ T′) → Language (S′ ⇒ T′) ⟨ ⟨ untyped ⟩ ↦ ⟨ t ⟩ ⟩
+        lemma : ∀ {S′ T′} → Overloads F (S′ ⇒ T′) → Language (S′ ⇒ T′) ⟨ ⟨untyped⟩ ↦ ⟨ t ⟩ ⟩
         lemma {S′} {T′} o with dec-language S′ error
-        lemma {S′} {T′} o | Left ¬S′e = bar ¬S′e
-        lemma {S′} {T′} o | Right S′e = function-ok (tgt₁ o S′e T₁t)
+        lemma {S′} {T′} o | Left ¬S′e = function-nok (untyped ¬S′e)
+        lemma {S′} {T′} o | Right S′e = function-ok (one (tgt₁ o S′e T₁t))
 
-      result₁ ⟨ s ⟩ Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness {error} T₁t ¬Tt) = witness (ov-language Fᶠ lemma) (function-error₁ Ss ¬Tt) where
+      result₁ ⟨ s ⟩ Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness {error} T₁t ¬Tt) = witness (ov-language Fᶠ lemma) (function-function (one Ss) (error ¬Tt)) where
 
         lemma : ∀ {S′ T′} → Overloads F (S′ ⇒ T′) → Language (S′ ⇒ T′) ⟨ ⟨ s ⟩ ↦ error ⟩
         lemma {S′} {T′} o with dec-language S′ ⟨ s ⟩
-        lemma {S′} {T′} o | Left ¬S′s = function-nok ¬S′s
-        lemma {S′} {T′} o | Right S′s = function-error (tgt₁ o S′s T₁t)
+        lemma {S′} {T′} o | Left ¬S′s = function-nok (one ¬S′s)
+        lemma {S′} {T′} o | Right S′s = function-ok (error (tgt₁ o S′s T₁t))
 
-      result₁ ⟨ s ⟩ Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness {⟨ t ⟩} T₁t ¬Tt) = witness (ov-language Fᶠ lemma) (function-ok₁ Ss ¬Tt) where
+      result₁ ⟨ s ⟩ Ss ¬S₀s (defn S₁ T₁ o₁ S₁s tgt₁) | Left (witness {⟨ t ⟩} T₁t ¬Tt) = witness (ov-language Fᶠ lemma) (function-function (one Ss) (one ¬Tt)) where
 
         lemma : ∀ {S′ T′} → Overloads F (S′ ⇒ T′) → Language (S′ ⇒ T′) ⟨ ⟨ s ⟩ ↦ ⟨ t ⟩ ⟩
         lemma {S′} {T′} o with dec-language S′ ⟨ s ⟩
-        lemma {S′} {T′} o | Left ¬S′s = function-nok ¬S′s
-        lemma {S′} {T′} o | Right S′s = function-ok (tgt₁ o S′s T₁t)
+        lemma {S′} {T′} o | Left ¬S′s = function-nok (one ¬S′s)
+        lemma {S′} {T′} o | Right S′s = function-ok (one (tgt₁ o S′s T₁t))
 
 dec-subtypingˢᶠ F Fˢ (G ∩ H) with dec-subtypingˢᶠ F Fˢ G | dec-subtypingˢᶠ F Fˢ H
 dec-subtypingˢᶠ F Fˢ (G ∩ H) | Left F≮:G | _ = Left (≮:-∩-left F≮:G)
