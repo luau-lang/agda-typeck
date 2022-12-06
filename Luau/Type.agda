@@ -26,13 +26,13 @@ data Type : Set where
 number = scalar NUMBER
 boolean = scalar BOOLEAN
 string = scalar STRING
-nil = scalar NIL
+nill = scalar NIL
 
 -- Top function type
 funktion = (never ⇒ any)
 
 -- Top non-error type
-unknown = (((funktion ∪ number) ∪ string) ∪ nil) ∪ boolean
+unknown = (((funktion ∪ number) ∪ string) ∪ nill) ∪ boolean
 
 lhs : Type → Type
 lhs (T ⇒ _) = T
@@ -139,15 +139,15 @@ just T ≡ᴹᵀ just U with T ≡ᵀ U
 (just T ≡ᴹᵀ just U) | no p = no (λ q → p (just-inv q))
 
 optional : Type → Type
-optional (scalar NIL) = nil
-optional (T ∪ scalar NIL) = (T ∪ nil)
-optional T = (T ∪ nil)
+optional (scalar NIL) = nill
+optional (T ∪ scalar NIL) = (T ∪ nill)
+optional T = (T ∪ nill)
 
 normalizeOptional : Type → Type
 normalizeOptional (S ∪ T) with normalizeOptional S | normalizeOptional T
-normalizeOptional (S ∪ T) | (S′ ∪ scalar NIL) | (T′ ∪ nil) = (S′ ∪ T′) ∪ nil
-normalizeOptional (S ∪ T) | S′                | (T′ ∪ nil) = (S′ ∪ T′) ∪ nil
-normalizeOptional (S ∪ T) | (S′ ∪ scalar NIL) | T′         = (S′ ∪ T′) ∪ nil
+normalizeOptional (S ∪ T) | (S′ ∪ scalar NIL) | (T′ ∪ nil) = (S′ ∪ T′) ∪ nill
+normalizeOptional (S ∪ T) | S′                | (T′ ∪ nil) = (S′ ∪ T′) ∪ nill
+normalizeOptional (S ∪ T) | (S′ ∪ scalar NIL) | T′         = (S′ ∪ T′) ∪ nill
 normalizeOptional (S ∪ T) | S′                | scalar NIL = optional S′
 normalizeOptional (S ∪ T) | scalar NIL        | T′         = optional T′
 normalizeOptional (S ∪ T) | S′                | T′         = S′ ∪ T′

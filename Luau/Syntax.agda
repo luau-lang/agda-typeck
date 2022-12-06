@@ -51,9 +51,9 @@ data BinaryOperator : Set where
 data Value : Set where
   nil : Value
   addr : Addr → Value
-  number : Float → Value
+  num : Float → Value
   bool : Bool → Value
-  string : String → Value
+  str : String → Value
 
 data Block (a : Annotated) : Set
 data Stat (a : Annotated) : Set

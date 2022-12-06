@@ -11,34 +11,34 @@ open import Agda.Builtin.Nat using () renaming (_==_ to _==ᴬ_)
 open import FFI.Data.Maybe using (Maybe; just; nothing)
 open import Luau.Heap using (Heap; _≡_⊕_↦_; _[_]; function_is_end)
 open import Luau.Substitution using (_[_/_]ᴮ)
-open import Luau.Syntax using (Value; Expr; Stat; Block; nil; addr; val; var; function_is_end; _$_; block_is_end; local_←_; _∙_; done; return; name; fun; arg; binexp; BinaryOperator; +; -; *; /; <; >; ==; ~=; <=; >=; ··; number; bool; string)
+open import Luau.Syntax using (Value; Expr; Stat; Block; nil; addr; val; var; function_is_end; _$_; block_is_end; local_←_; _∙_; done; return; name; fun; arg; binexp; BinaryOperator; +; -; *; /; <; >; ==; ~=; <=; >=; ··; num; bool; str)
 open import Luau.RuntimeType using (RuntimeType; valueType)
 open import Properties.Product using (_×_; _,_)
 
 evalEqOp : Value → Value → Bool
 evalEqOp Value.nil Value.nil = true
 evalEqOp (addr x) (addr y) = (x ==ᴬ y)
-evalEqOp (number x) (number y) = primFloatEquality x y
+evalEqOp (num x) (num y) = primFloatEquality x y
 evalEqOp (bool true) (bool y) = y
 evalEqOp (bool false) (bool y) = not y
 evalEqOp _ _ = false
 
 evalNeqOp : Value → Value → Bool
-evalNeqOp (number x) (number y) = primFloatInequality x y
+evalNeqOp (num x) (num y) = primFloatInequality x y
 evalNeqOp x y = not (evalEqOp x y)
 
 data _⟦_⟧_⟶_ : Value → BinaryOperator → Value → Value → Set where
-  + : ∀ m n → (number m) ⟦ + ⟧ (number n) ⟶ number (primFloatPlus m n)
-  - : ∀ m n → (number m) ⟦ - ⟧ (number n) ⟶ number (primFloatMinus m n)
-  / : ∀ m n → (number m) ⟦ / ⟧ (number n) ⟶ number (primFloatTimes m n)
-  * : ∀ m n → (number m) ⟦ * ⟧ (number n) ⟶ number (primFloatDiv m n)
-  < : ∀ m n → (number m) ⟦ < ⟧ (number n) ⟶ bool (primFloatLess m n)
-  > : ∀ m n → (number m) ⟦ > ⟧ (number n) ⟶ bool (primFloatLess n m)
-  <= : ∀ m n → (number m) ⟦ <= ⟧ (number n) ⟶ bool ((primFloatLess m n) or (primFloatEquality m n))
-  >= : ∀ m n → (number m) ⟦ >= ⟧ (number n) ⟶ bool ((primFloatLess n m) or (primFloatEquality m n))
+  + : ∀ m n → (num m) ⟦ + ⟧ (num n) ⟶ num (primFloatPlus m n)
+  - : ∀ m n → (num m) ⟦ - ⟧ (num n) ⟶ num (primFloatMinus m n)
+  / : ∀ m n → (num m) ⟦ / ⟧ (num n) ⟶ num (primFloatTimes m n)
+  * : ∀ m n → (num m) ⟦ * ⟧ (num n) ⟶ num (primFloatDiv m n)
+  < : ∀ m n → (num m) ⟦ < ⟧ (num n) ⟶ bool (primFloatLess m n)
+  > : ∀ m n → (num m) ⟦ > ⟧ (num n) ⟶ bool (primFloatLess n m)
+  <= : ∀ m n → (num m) ⟦ <= ⟧ (num n) ⟶ bool ((primFloatLess m n) or (primFloatEquality m n))
+  >= : ∀ m n → (num m) ⟦ >= ⟧ (num n) ⟶ bool ((primFloatLess n m) or (primFloatEquality m n))
   == : ∀ v w → v ⟦ == ⟧ w ⟶ bool (evalEqOp v w)
   ~= : ∀ v w → v ⟦ ~= ⟧ w ⟶ bool (evalNeqOp v w)
-  ·· : ∀ x y → (string x) ⟦ ·· ⟧ (string y) ⟶ string (primStringAppend x y)
+  ·· : ∀ x y → (str x) ⟦ ·· ⟧ (str y) ⟶ str (primStringAppend x y)
 
 data _⊢_⟶ᴮ_⊣_ {a} : Heap a → Block a → Block a → Heap a → Set
 data _⊢_⟶ᴱ_⊣_ {a} : Heap a → Expr a → Expr a → Heap a → Set

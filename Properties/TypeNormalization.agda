@@ -3,7 +3,7 @@
 module Properties.TypeNormalization where
 
 open import Agda.Builtin.Equality using (refl)
-open import Luau.Type using (Type; Scalar; nil; number; string; boolean; error; never; any; unknown; scalar; _⇒_; _∪_; _∩_; NIL; NUMBER; STRING; BOOLEAN; _≡ˢ_; _≡ᵀ_)
+open import Luau.Type using (Type; Scalar; nill; number; string; boolean; error; never; any; unknown; scalar; _⇒_; _∪_; _∩_; NIL; NUMBER; STRING; BOOLEAN; _≡ˢ_; _≡ᵀ_)
 open import Luau.Subtyping using (Language; ¬Language; scalar; any; left; right; function-ok; function-error; function-nok; function-warning; scalar-warning; scalar-function; function-scalar; _,_; _↦_; ⟨⟩; ⟨_⟩; error; diverge)
 open import Luau.TypeNormalization using (_∪ⁿ_; _∩ⁿ_; _∪ᶠ_; _∪ⁿˢ_; _∩ⁿˢ_; normalize)
 open import Luau.Subtyping using (_<:_; _≮:_; witness; never)

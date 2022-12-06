@@ -1,6 +1,6 @@
 module Luau.TypeNormalization where
 
-open import Luau.Type using (Type; nil; number; string; boolean; error; never; any; unknown; scalar; _⇒_; _∪_; _∩_; _≡ˢ_)
+open import Luau.Type using (Type; nill; number; string; boolean; error; never; any; unknown; scalar; _⇒_; _∪_; _∩_; _≡ˢ_)
 open import Properties.Dec using (Dec; yes; no)
 
 -- Operations on normalized types

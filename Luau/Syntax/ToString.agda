@@ -3,7 +3,7 @@ module Luau.Syntax.ToString where
 open import Agda.Builtin.Bool using (true; false)
 open import Agda.Builtin.Float using (primShowFloat)
 open import Agda.Builtin.String using (primShowString)
-open import Luau.Syntax using (Value; Block; Stat; Expr; VarDec; FunDec; nil; bool; val; var; var_∈_; addr; _$_; function_is_end; return; local_←_; _∙_; done; block_is_end; _⟨_⟩; _⟨_⟩∈_; number; BinaryOperator; +; -; *; /; <; >; ==; ~=; <=; >=; ··; binexp; string)
+open import Luau.Syntax using (Value; Block; Stat; Expr; VarDec; FunDec; nil; bool; val; var; var_∈_; addr; _$_; function_is_end; return; local_←_; _∙_; done; block_is_end; _⟨_⟩; _⟨_⟩∈_; num; BinaryOperator; +; -; *; /; <; >; ==; ~=; <=; >=; ··; binexp; str)
 open import FFI.Data.String using (String; _++_)
 open import Luau.Addr.ToString using (addrToString)
 open import Luau.Type.ToString using (typeToString)
@@ -35,10 +35,10 @@ binOpToString ·· = ".."
 valueToString : Value → String
 valueToString nil = "nil"
 valueToString (addr a) = addrToString a
-valueToString (number x) = primShowFloat x
+valueToString (num x) = primShowFloat x
 valueToString (bool false) = "false"
 valueToString (bool true) = "true"
-valueToString (string x) = primShowString x
+valueToString (str x) = primShowString x
 
 exprToString′ : ∀ {a} → String → Expr a → String
 statToString′ : ∀ {a} → String → Stat a → String

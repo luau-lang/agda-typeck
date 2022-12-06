@@ -4,10 +4,10 @@ module Luau.StrictMode.ToString where
 
 open import Agda.Builtin.Nat using (Nat; suc)
 open import FFI.Data.String using (String; _++_)
-open import Luau.Subtyping using (_≮:_; Tree; witness; scalar; function; function-ok; function-err; _↦_; ⟨⟩↦)
+open import Luau.Subtyping using (_≮:_; TypedValue; error; witness; scalar; warning; diverge; ⟨untyped⟩; function-ok; function-warning; _↦_; ⟨⟩; ⟨_⟩)
 open import Luau.StrictMode using (Warningᴱ; Warningᴮ; UnallocatedAddress; UnboundVariable; FunctionCallMismatch; FunctionDefnMismatch; BlockMismatch; app₁; app₂; BinOpMismatch₁; BinOpMismatch₂; bin₁; bin₂; block₁; return; LocalVarMismatch; local₁; local₂; function₁; function₂; heap; expr; block; addr)
-open import Luau.Syntax using (Expr; val; yes; var; var_∈_; _⟨_⟩∈_; _$_; addr; number; binexp; nil; function_is_end; block_is_end; done; return; local_←_; _∙_; fun; arg; name)
-open import Luau.Type using (number; boolean; string; nil)
+open import Luau.Syntax using (Expr; val; yes; var; var_∈_; _⟨_⟩∈_; _$_; addr; num; binexp; nil; function_is_end; block_is_end; done; return; local_←_; _∙_; fun; arg; name)
+open import Luau.Type using (NUMBER; BOOLEAN; STRING; NIL)
 open import Luau.TypeCheck using (_⊢ᴮ_∈_; _⊢ᴱ_∈_)
 open import Luau.Addr.ToString using (addrToString)
 open import Luau.Var.ToString using (varToString)
@@ -21,18 +21,26 @@ tmp 2 = "y"
 tmp 3 = "z"
 tmp (suc (suc (suc n))) = tmp n ++ "'"
 
-treeToString : Tree → Nat → String → String
-treeToString (scalar number) n v = v ++ " is a number"
-treeToString (scalar boolean) n v = v ++ " is a boolean"
-treeToString (scalar string) n v = v ++ " is a string"
-treeToString (scalar nil) n v = v ++ " is nil"
-treeToString function n v = v ++ " is a function"
-treeToString (s ↦ t) n v = treeToString t (suc n) (v ++ "(" ++ w ++ ")") ++ " when\n  " ++ treeToString s (suc n) w where w = tmp n
-treeToString (function-err t) n v = v ++ "(" ++ w ++ ") can error when\n  " ++ treeToString t (suc n) w where w = tmp n
-treeToString (⟨⟩↦ t) n v = treeToString t n (v ++ "()")
+valueToString : TypedValue → Nat → String → String
+valueToString (scalar NUMBER) n v = v ++ " is a number"
+valueToString (scalar BOOLEAN) n v = v ++ " is a boolean"
+valueToString (scalar STRING) n v = v ++ " is a string"
+valueToString (scalar NIL) n v = v ++ " is nil"
+valueToString (⟨ s ⟩ ↦ ⟨ t ⟩) n v = valueToString t (suc n) (v ++ "(" ++ w ++ ")") ++ " when\n  " ++ valueToString s (suc n) w where w = tmp n
+valueToString (⟨⟩ ↦ ⟨ t ⟩) n v = valueToString t n (v ++ "()")
+valueToString (warning ⟨ t ⟩) n v = v ++ "(" ++ w ++ ") can error when\n  " ++ valueToString t (suc n) w where w = tmp n
+valueToString (warning error) n v = v ++ "(" ++ w ++ ") can error when\n  " ++ w ++ " is untyped" where w = tmp n
+valueToString (⟨⟩ ↦ error) n v = v ++ "() can error"
+valueToString (⟨⟩ ↦ diverge) n v = v ++ "() can diverge"
+valueToString (⟨untyped⟩ ↦ error) n v = v ++ "(" ++ w ++ ") can error when\n  " ++ w ++ " is untyped" where w = tmp n
+valueToString (⟨untyped⟩ ↦ diverge) n v = v ++ "(" ++ w ++ ") can diverge when\n  " ++ w ++ " is untyped" where w = tmp n
+valueToString (⟨untyped⟩ ↦ ⟨ t ⟩) n v = valueToString t (suc n) (v ++ "(" ++ w ++ ")") ++ " when\n  " ++ w ++ " is untyped" where w = tmp n
+valueToString (⟨ s ⟩ ↦ error) n v = v ++ "(" ++ w ++ ")" ++ "can error when\n  " ++ valueToString s (suc n) w where w = tmp n
+valueToString (⟨ s ⟩ ↦ diverge) n v = v ++ "(" ++ w ++ ")" ++ "can diverge when\n  " ++ valueToString s (suc n) w where w = tmp n
 
 subtypeWarningToString : ∀ {T U} → (T ≮: U) → String
-subtypeWarningToString (witness t p q) = "\n  because provided type contains v, where " ++ treeToString t 0 "v"
+subtypeWarningToString (witness {error} p q) = "\n  because provided type allows errors"
+subtypeWarningToString (witness {⟨ t ⟩} p q) = "\n  because provided type contains v, where " ++ valueToString t 0 "v"
 
 warningToStringᴱ : ∀ {H Γ T} M → {D : Γ ⊢ᴱ M ∈ T} → Warningᴱ H D → String
 warningToStringᴮ : ∀ {H Γ T} B → {D : Γ ⊢ᴮ B ∈ T} → Warningᴮ H D → String

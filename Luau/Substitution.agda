@@ -1,6 +1,6 @@
 module Luau.Substitution where
 
-open import Luau.Syntax using (Value; Expr; Stat; Block; val; nil; bool; addr; var; function_is_end; _$_; block_is_end; local_←_; _∙_; done; return; _⟨_⟩ ; name; fun; arg; number; binexp)
+open import Luau.Syntax using (Value; Expr; Stat; Block; val; nil; bool; addr; var; function_is_end; _$_; block_is_end; local_←_; _∙_; done; return; _⟨_⟩ ; name; fun; arg; binexp)
 open import Luau.Var using (Var; _≡ⱽ_)
 open import Properties.Dec using (Dec; yes; no)
 

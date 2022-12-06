@@ -1,6 +1,6 @@
 {-# OPTIONS --rewriting #-}
 
-open import Luau.Type using (Type; Scalar; nil; number; string; boolean; scalar; error; never; any; _⇒_; _∪_; _∩_)
+open import Luau.Type using (Type; Scalar; nill; number; string; boolean; scalar; error; never; any; _⇒_; _∪_; _∩_)
 open import Properties.Equality using (_≢_)
 
 module Luau.Subtyping where
