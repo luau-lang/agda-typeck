@@ -9,46 +9,50 @@ module Luau.Subtyping where
 
 -- We think of types as languages of semantic values
 
-data SValue : Set
-data SValues : Set
-data SResult : Set
+data TypedValue : Set
+data Arguments : Set
+data Result : Set
+data Value : Set
 
-data SValue where
+data TypedValue where
 
-  scalar : Scalar → SValue
-  _↦_ : SValues → SResult → SValue
+  scalar : Scalar → TypedValue
+  warning : Value → TypedValue
+  _↦_ : Arguments → Result → TypedValue
 
-data SValues where
+data Arguments where
 
   -- For the moment just do zero-arg and one-arg functions.
-  ⟨⟩ : SValues
-  ⟨_⟩ : SValue → SValues
+  ⟨⟩ : Arguments
+  ⟨untyped⟩ : Arguments
+  ⟨_⟩ : TypedValue → Arguments
 
-data SResult where
+data Result where
 
   -- The effects we're tracking are causing a runtime error, a typecheck warning,
   -- or diverging
-  error : SResult
-  warning : SResult
-  diverge : SResult
-  ⟨_⟩ : SValue → SResult
+  error : Result
+  diverge : Result
+  ⟨_⟩ : TypedValue → Result
 
-data LValue : Set where
+data Value where
 
-  error : LValue
-  ⟨_⟩ : SValue → LValue
+  error : Value
+  ⟨_⟩ : TypedValue → Value
 
-data Language : Type → LValue → Set
-data ¬Language : Type → LValue → Set
+data Language : Type → Value → Set
+data ¬Language : Type → Value → Set
+data RLanguage : Type → Result → Set
+data ¬RLanguage : Type → Result → Set
+data ALanguage : Type → Arguments → Set
+data ¬ALanguage : Type → Arguments → Set
 
 data Language where
 
   scalar : ∀ T → Language (scalar T) ⟨ scalar T ⟩
-  function-nok : ∀ {T U t u} → (¬Language T ⟨ t ⟩) → Language (T ⇒ U) ⟨ ⟨ t ⟩ ↦ u ⟩
-  function-nerror : ∀ {T U} → (¬Language T error) → Language (T ⇒ U) ⟨ ⟨⟩ ↦ warning ⟩
-  function-ok : ∀ {T U t u} → (Language U ⟨ u ⟩) → Language (T ⇒ U) ⟨ t ↦ ⟨ u ⟩ ⟩
-  function-error : ∀ {T U t} → (Language U error) → Language (T ⇒ U) ⟨ t ↦ error ⟩
-  function-diverge : ∀ {T U t} → Language (T ⇒ U) ⟨ t ↦ diverge ⟩
+  function-nok : ∀ {T U t u} → (¬ALanguage T t) → Language (T ⇒ U) ⟨ t ↦ u ⟩
+  function-ok : ∀ {T U t u} → (RLanguage U u) → Language (T ⇒ U) ⟨ t ↦ u ⟩
+  function-warning : ∀ {T U t} → (¬Language T t) → Language (T ⇒ U) ⟨ warning t ⟩
   left : ∀ {T U t} → Language T t → Language (T ∪ U) t
   right : ∀ {T U u} → Language U u → Language (T ∪ U) u
   _,_ : ∀ {T U t} → Language T t → Language U t → Language (T ∩ U) t
@@ -59,20 +63,39 @@ data ¬Language where
 
   scalar-scalar : ∀ S T → (S ≢ T) → ¬Language (scalar T) ⟨ scalar S ⟩
   scalar-function : ∀ S {t u} → ¬Language (scalar S) ⟨ t ↦ u ⟩
+  scalar-warning : ∀ {T t} → ¬Language (scalar T) ⟨ warning t ⟩
   scalar-error : ∀ S → ¬Language (scalar S) error
   function-scalar : ∀ S {T U} → ¬Language (T ⇒ U) ⟨ scalar S ⟩
-  function-ok₀ : ∀ {T U u} → (¬Language U ⟨ u ⟩) → ¬Language (T ⇒ U) ⟨ ⟨⟩ ↦ ⟨ u ⟩ ⟩
-  function-ok₁ : ∀ {T U t u} → (Language T ⟨ t ⟩) → (¬Language U ⟨ u ⟩) → ¬Language (T ⇒ U) ⟨ ⟨ t ⟩ ↦ ⟨ u ⟩ ⟩
-  function-error₀ : ∀ {T U} → (¬Language U error) → ¬Language (T ⇒ U) ⟨ ⟨⟩ ↦ error ⟩
-  function-error₁ : ∀ {T U t} → (Language T ⟨ t ⟩) → (¬Language U error) → ¬Language (T ⇒ U) ⟨ ⟨ t ⟩ ↦ error ⟩
-  function-warning₀ : ∀ {T U} → (Language T error) → ¬Language (T ⇒ U) ⟨ ⟨⟩ ↦ warning ⟩
-  function-warning₁ : ∀ {T U t} → (Language T ⟨ t ⟩) → ¬Language (T ⇒ U) ⟨ ⟨ t ⟩ ↦ warning ⟩
+  function-function : ∀ {T U t u} → (ALanguage T t) → (¬RLanguage U u) → ¬Language (T ⇒ U) ⟨ t ↦ u ⟩
+  function-warning : ∀ {T U t} → Language T t → ¬Language (T ⇒ U) ⟨ warning t ⟩
   function-error : ∀ {T U} → ¬Language (T ⇒ U) error
   _,_ : ∀ {T U t} → ¬Language T t → ¬Language U t → ¬Language (T ∪ U) t
   left : ∀ {T U t} → ¬Language T t → ¬Language (T ∩ U) t
   right : ∀ {T U u} → ¬Language U u → ¬Language (T ∩ U) u
   never : ∀ {t} → ¬Language never t
   error : ∀ {t} → ¬Language error ⟨ t ⟩
+
+data RLanguage where
+
+  error : ∀ {T} → Language T error → RLanguage T error
+  diverge : ∀ {T} → RLanguage T diverge
+  one : ∀ {T t} → Language T ⟨ t ⟩ → RLanguage T ⟨ t ⟩
+
+data ¬RLanguage where
+
+  error : ∀ {T} → ¬Language T error → ¬RLanguage T error
+  one : ∀ {T t} → ¬Language T ⟨ t ⟩ → ¬RLanguage T ⟨ t ⟩
+
+data ALanguage where
+
+  none : ∀ {T} → ALanguage T ⟨⟩
+  untyped : ∀ {T} → Language T error → ALanguage T ⟨untyped⟩
+  one : ∀ {T t} → Language T ⟨ t ⟩ → ALanguage T ⟨ t ⟩
+
+data ¬ALanguage where
+
+  untyped : ∀ {T} → ¬Language T error → ¬ALanguage T ⟨untyped⟩
+  one : ∀ {T t} → ¬Language T ⟨ t ⟩ → ¬ALanguage T ⟨ t ⟩
 
 -- Subtyping as language inclusion
 
