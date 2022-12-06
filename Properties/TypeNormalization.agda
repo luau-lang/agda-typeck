@@ -4,7 +4,7 @@ module Properties.TypeNormalization where
 
 open import Agda.Builtin.Equality using (refl)
 open import Luau.Type using (Type; Scalar; nil; number; string; boolean; error; never; any; unknown; scalar; _⇒_; _∪_; _∩_; NIL; NUMBER; STRING; BOOLEAN; _≡ˢ_; _≡ᵀ_)
-open import Luau.Subtyping using (Language; ¬Language; scalar; any; left; right; function-ok; function-error; function-nok; function-nerror; function-diverge; scalar-function; function-scalar; _,_; _↦_; ⟨⟩; ⟨_⟩; error; diverge)
+open import Luau.Subtyping using (Language; ¬Language; scalar; any; left; right; function-ok; function-error; function-nok; function-warning; scalar-warning; scalar-function; function-scalar; _,_; _↦_; ⟨⟩; ⟨_⟩; error; diverge)
 open import Luau.TypeNormalization using (_∪ⁿ_; _∩ⁿ_; _∪ᶠ_; _∪ⁿˢ_; _∩ⁿˢ_; normalize)
 open import Luau.Subtyping using (_<:_; _≮:_; witness; never)
 open import Properties.Dec using (Dec; yes; no)
@@ -40,7 +40,7 @@ fun-top (F ∩ G) = <:-trans <:-∩-left (fun-top F)
 
 -- function types are inhabited
 fun-function : ∀ {F} → FunType F → Language F ⟨ ⟨⟩ ↦ diverge ⟩
-fun-function (S ⇒ T) = function-diverge
+fun-function (S ⇒ T) = function-ok diverge -- function-diverge
 fun-function (F ∩ G) = (fun-function F , fun-function G)
 
 fun-≮:-never : ∀ {F} → FunType F → (F ≮: never)
@@ -48,11 +48,9 @@ fun-≮:-never F = witness (fun-function F) never
 
 -- function types aren't scalars
 fun-¬scalar : ∀ S {F t} → FunType F → Language F t → ¬Language (scalar S) t
-fun-¬scalar s (S ⇒ T) (function-nok x) = scalar-function s
-fun-¬scalar s (S ⇒ T) (function-nerror x) = scalar-function s
+fun-¬scalar s (S ⇒ T) (function-nok p) = scalar-function s
 fun-¬scalar s (S ⇒ T) (function-ok p) = scalar-function s
-fun-¬scalar s (S ⇒ T) (function-error p) = scalar-function s
-fun-¬scalar s (S ⇒ T) function-diverge = scalar-function s
+fun-¬scalar s (S ⇒ T) (function-warning p) = scalar-warning
 fun-¬scalar s (F ∩ G) (p , q) = fun-¬scalar s G q
 
 ¬scalar-fun : ∀ {F} → FunType F → ∀ S → ¬Language F ⟨ scalar S ⟩
@@ -65,10 +63,8 @@ scalar-≮:-fun F s = witness (scalar s) (¬scalar-fun F s)
 -- function types aren't errors
 fun-¬error : ∀ {F t} → FunType F → Language F t → ¬Language error t
 fun-¬error (S ⇒ T) (function-nok p) = error
-fun-¬error (S ⇒ T) (function-nerror p) = error
 fun-¬error (S ⇒ T) (function-ok p) = error
-fun-¬error (S ⇒ T) (function-error p) = error
-fun-¬error (S ⇒ T) function-diverge = error
+fun-¬error (S ⇒ T) (function-warning p) = error
 fun-¬error (F ∩ G) (p , q) = fun-¬error G q
 
 ¬error-fun : ∀ {F} → FunType F → ¬Language F error
