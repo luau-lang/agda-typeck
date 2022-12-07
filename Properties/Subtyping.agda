@@ -340,6 +340,9 @@ error-<: p error = p
 function-∩-error-<:-never : ∀ {T U V} → ((T ⇒ U) ∩ error) <: V
 function-∩-error-<:-never (() , error)
 
+error-≮:-never : error ≮: never
+error-≮:-never = witness error never
+
 -- Properties of any and never
 any-≮: : ∀ {T U} → (T ≮: U) → (any ≮: U)
 any-≮: (witness p q) = witness any q
