@@ -10,9 +10,9 @@ open import Luau.Heap using (Heap; Object; function_is_end; defn; alloc; ok; nex
 open import Luau.ResolveOverloads using (src; resolve)
 open import Luau.StrictMode using (Warningᴱ; Warningᴮ; Warningᴼ; Warningᴴ; UnallocatedAddress; UnboundVariable; FunctionCallMismatch; app₁; app₂; BinOpMismatch₁; BinOpMismatch₂; bin₁; bin₂; BlockMismatch; block₁; return; LocalVarMismatch; local₁; local₂; FunctionDefnMismatch; function₁; function₂; heap; expr; block; addr)
 open import Luau.Substitution using (_[_/_]ᴮ; _[_/_]ᴱ; _[_/_]ᴮunless_; var_[_/_]ᴱwhenever_)
-open import Luau.Subtyping using (_<:_; _≮:_; witness; any; never; scalar; function; scalar-function; scalar-function-ok; scalar-function-err; scalar-scalar; function-scalar; function-ok; function-err; left; right; _,_; Tree; Language; ¬Language)
-open import Luau.Syntax using (Expr; yes; var; val; var_∈_; _⟨_⟩∈_; _$_; addr; number; bool; string; binexp; nil; function_is_end; block_is_end; done; return; local_←_; _∙_; fun; arg; name; ==; ~=)
-open import Luau.Type using (Type; nil; number; boolean; string; _⇒_; never; any; _∩_; _∪_; _≡ᵀ_; _≡ᴹᵀ_)
+open import Luau.Subtyping using (_<:_; _≮:_; witness; any; never; scalar; scalar-function; scalar-scalar; function-scalar; function-ok; left; right; _,_; Language; ¬Language)
+open import Luau.Syntax using (Expr; yes; var; val; var_∈_; _⟨_⟩∈_; _$_; addr; num; bool; str; binexp; nil; function_is_end; block_is_end; done; return; local_←_; _∙_; fun; arg; name; ==; ~=)
+open import Luau.Type using (Type; NIL; NUMBER; STRING; BOOLEAN; nill; number; boolean; string; _⇒_; never; any; _∩_; _∪_; _≡ᵀ_; _≡ᴹᵀ_)
 open import Luau.TypeCheck using (_⊢ᴮ_∈_; _⊢ᴱ_∈_; _⊢ᴴᴮ_▷_∈_; _⊢ᴴᴱ_▷_∈_; nil; var; addr; app; function; block; done; return; local; orAny; srcBinOp; tgtBinOp)
 open import Luau.Var using (_≡ⱽ_)
 open import Luau.Addr using (_≡ᴬ_)
@@ -30,7 +30,7 @@ open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡
 open import Properties.TypeCheck using (typeOfᴼ; typeOfᴹᴼ; typeOfⱽ; typeOfᴱ; typeOfᴮ; typeCheckᴱ; typeCheckᴮ; typeCheckᴼ; typeCheckᴴ)
 open import Luau.OpSem using (_⟦_⟧_⟶_; _⊢_⟶*_⊣_; _⊢_⟶ᴮ_⊣_; _⊢_⟶ᴱ_⊣_; app₁; app₂; function; beta; return; block; done; local; subst; binOp₀; binOp₁; binOp₂; refl; step; +; -; *; /; <; >; ==; ~=; <=; >=; ··)
 open import Luau.RuntimeError using (BinOpError; RuntimeErrorᴱ; RuntimeErrorᴮ; FunctionMismatch; BinOpMismatch₁; BinOpMismatch₂; UnboundVariable; SEGV; app₁; app₂; bin₁; bin₂; block; local; return; +; -; *; /; <; >; <=; >=; ··)
-open import Luau.RuntimeType using (RuntimeType; valueType; number; string; boolean; nil; function)
+open import Luau.RuntimeType using (RuntimeType; valueType; num; str; bool; nil; function)
 
 data _⊑_ (H : Heap yes) : Heap yes → Set where
   refl : (H ⊑ H)
@@ -72,9 +72,9 @@ lookup-⊑-nothing {H} a (snoc o) p | no q = trans (lookup-not-allocated o q) p
 <:-heap-weakeningᴱ Γ H (val (addr a)) (snoc {a = b} q) with a ≡ᴬ b
 <:-heap-weakeningᴱ Γ H (val (addr a)) (snoc {a = a} defn) | yes refl = <:-any
 <:-heap-weakeningᴱ Γ H (val (addr a)) (snoc {a = b} q) | no r = ≡-impl-<: (sym (cong orAny (cong typeOfᴹᴼ (lookup-not-allocated q r))))
-<:-heap-weakeningᴱ Γ H (val (number n)) h = <:-refl
+<:-heap-weakeningᴱ Γ H (val (num n)) h = <:-refl
 <:-heap-weakeningᴱ Γ H (val (bool b)) h = <:-refl
-<:-heap-weakeningᴱ Γ H (val (string s)) h = <:-refl
+<:-heap-weakeningᴱ Γ H (val (str s)) h = <:-refl
 <:-heap-weakeningᴱ Γ H (M $ N) h = <:-resolve (<:-heap-weakeningᴱ Γ H M h) (<:-heap-weakeningᴱ Γ H N h)
 <:-heap-weakeningᴱ Γ H (function f ⟨ var x ∈ S ⟩∈ T is B end) h = <:-refl
 <:-heap-weakeningᴱ Γ H (block var b ∈ T is N end) h = <:-refl
@@ -148,8 +148,8 @@ binOpPreservation H (·· v w) = refl
 <:-reductionᴱ : ∀ H M {H′ M′} → (H ⊢ M ⟶ᴱ M′ ⊣ H′) → Either (typeOfᴱ H′ ∅ M′ <: typeOfᴱ H ∅ M) (Warningᴱ H (typeCheckᴱ H ∅ M))
 <:-reductionᴮ : ∀ H B {H′ B′} → (H ⊢ B ⟶ᴮ B′ ⊣ H′) → Either (typeOfᴮ H′ ∅ B′ <: typeOfᴮ H ∅ B) (Warningᴮ H (typeCheckᴮ H ∅ B))
 
-<:-reductionᴱ H (M $ N) (app₁ s) = mapLR (λ p → <:-resolve p (<:-heap-weakeningᴱ ∅ H N (rednᴱ⊑ s))) app₁ (<:-reductionᴱ H M s)
-<:-reductionᴱ H (M $ N) (app₂ q s) = mapLR (λ p → <:-resolve (<:-heap-weakeningᴱ ∅ H M (rednᴱ⊑ s)) p) app₂ (<:-reductionᴱ H N s)
+<:-reductionᴱ H (M $ N) (app₁ s) = {!!} -- mapLR (λ p → <:-resolve p (<:-heap-weakeningᴱ ∅ H N (rednᴱ⊑ s))) app₁ (<:-reductionᴱ H M s)
+<:-reductionᴱ H (M $ N) (app₂ q s) = {!!} -- mapLR (λ p → <:-resolve (<:-heap-weakeningᴱ ∅ H M (rednᴱ⊑ s)) p) app₂ (<:-reductionᴱ H N s)
 <:-reductionᴱ H (M $ N) (beta (function f ⟨ var y ∈ S ⟩∈ U is B end) v refl q) with dec-subtyping (typeOfᴱ H ∅ (val v)) S
 <:-reductionᴱ H (M $ N) (beta (function f ⟨ var y ∈ S ⟩∈ U is B end) v refl q) | Left r = Right (FunctionCallMismatch (≮:-trans-≡ r (cong src (cong orAny (cong typeOfᴹᴼ (sym q))))))
 <:-reductionᴱ H (M $ N) (beta (function f ⟨ var y ∈ S ⟩∈ U is B end) v refl q) | Right r = Left (<:-trans-≡ (<:-resolve-⇒ r) (cong (λ F → resolve F (typeOfᴱ H ∅ N)) (cong orAny (cong typeOfᴹᴼ (sym q)))))
@@ -158,7 +158,7 @@ binOpPreservation H (·· v w) = refl
 <:-reductionᴱ H (block var b ∈ T is return (val v) ∙ B end) (return v) with dec-subtyping (typeOfᴱ H ∅ (val v)) T
 <:-reductionᴱ H (block var b ∈ T is return (val v) ∙ B end) (return v) | Left p = Right (BlockMismatch p)
 <:-reductionᴱ H (block var b ∈ T is return (val v) ∙ B end) (return v) | Right p = Left p
-<:-reductionᴱ H (block var b ∈ T is done end) done with dec-subtyping nil T
+<:-reductionᴱ H (block var b ∈ T is done end) done with dec-subtyping nill T
 <:-reductionᴱ H (block var b ∈ T is done end) done | Left p = Right (BlockMismatch p)
 <:-reductionᴱ H (block var b ∈ T is done end) done | Right p = Left p
 <:-reductionᴱ H (binexp M op N) (binOp₀ s) = Left (≡-impl-<: (sym (binOpPreservation H s)))
@@ -173,10 +173,10 @@ binOpPreservation H (·· v w) = refl
 <:-reductionᴮ H (return M ∙ B) (return s) = mapR return (<:-reductionᴱ H M s)
 
 ≮:-reductionᴱ : ∀ H M {H′ M′ T} → (H ⊢ M ⟶ᴱ M′ ⊣ H′) → (typeOfᴱ H′ ∅ M′ ≮: T) → Either (typeOfᴱ H ∅ M ≮: T) (Warningᴱ H (typeCheckᴱ H ∅ M))
-≮:-reductionᴱ H M s p = mapL (λ q → <:-trans-≮: q p) (<:-reductionᴱ H M s)
+≮:-reductionᴱ H M s p = {!!} -- mapL (λ q → <:-trans-≮: q p) (<:-reductionᴱ H M s)
 
 ≮:-reductionᴮ : ∀ H B {H′ B′ T} → (H ⊢ B ⟶ᴮ B′ ⊣ H′) → (typeOfᴮ H′ ∅ B′ ≮: T) → Either (typeOfᴮ H ∅ B ≮: T) (Warningᴮ H (typeCheckᴮ H ∅ B))
-≮:-reductionᴮ H B s p = mapL (λ q → <:-trans-≮: q p) (<:-reductionᴮ H B s)
+≮:-reductionᴮ H B s p = {!!} -- mapL (λ q → <:-trans-≮: q p) (<:-reductionᴮ H B s)
 
 reflect-substitutionᴱ : ∀ {Γ T} H M v x → Warningᴱ H (typeCheckᴱ H Γ (M [ v / x ]ᴱ)) → Either (Warningᴱ H (typeCheckᴱ H (Γ ⊕ x ↦ T) M)) (Either (Warningᴱ H (typeCheckᴱ H ∅ (val v))) (typeOfᴱ H ∅ (val v) ≮: T))
 reflect-substitutionᴱ-whenever : ∀ {Γ T} H v x y (p : Dec(x ≡ y)) → Warningᴱ H (typeCheckᴱ H Γ (var y [ v / x ]ᴱwhenever p)) → Either (Warningᴱ H (typeCheckᴱ H (Γ ⊕ x ↦ T) (var y))) (Either (Warningᴱ H (typeCheckᴱ H ∅ (val v))) (typeOfᴱ H ∅ (val v) ≮: T))
@@ -190,7 +190,7 @@ reflect-substitutionᴱ H (val (addr a)) v x (UnallocatedAddress r) = Left (Unal
 reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch p) with ≮:-substitutivityᴱ H N v x p
 reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch p) | Right W = Right (Right W)
 reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch p) | Left q with ≮:-substitutivityᴱ H M v x (src-any-≮: q)
-reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch p) | Left q | Left r = Left ((FunctionCallMismatch ∘ any-src-≮: q) r)
+reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch p) | Left q | Left r = Left ((FunctionCallMismatch ∘ any-src-≮: q {!!}) r)
 reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch p) | Left q | Right W = Right (Right W)
 reflect-substitutionᴱ H (M $ N) v x (app₁ W) = mapL app₁ (reflect-substitutionᴱ H M v x W)
 reflect-substitutionᴱ H (M $ N) v x (app₂ W) = mapL app₂ (reflect-substitutionᴱ H N v x W)
@@ -224,7 +224,7 @@ reflect-weakeningᴮ : ∀ Γ H B {H′} → (H ⊑ H′) → Warningᴮ H′ (t
 
 reflect-weakeningᴱ Γ H (var x) h (UnboundVariable p) = (UnboundVariable p)
 reflect-weakeningᴱ Γ H (val (addr a)) h (UnallocatedAddress p) = UnallocatedAddress (lookup-⊑-nothing a h p)
-reflect-weakeningᴱ Γ H (M $ N) h (FunctionCallMismatch p) = FunctionCallMismatch (≮:-heap-weakeningᴱ Γ H N h (any-src-≮: p (≮:-heap-weakeningᴱ Γ H M h (src-any-≮: p))))
+reflect-weakeningᴱ Γ H (M $ N) h (FunctionCallMismatch p) = FunctionCallMismatch (≮:-heap-weakeningᴱ Γ H N h (any-src-≮: p {!!} (≮:-heap-weakeningᴱ Γ H M h (src-any-≮: p))))
 reflect-weakeningᴱ Γ H (M $ N) h (app₁ W) = app₁ (reflect-weakeningᴱ Γ H M h W)
 reflect-weakeningᴱ Γ H (M $ N) h (app₂ W) = app₂ (reflect-weakeningᴱ Γ H N h W)
 reflect-weakeningᴱ Γ H (binexp M op N) h (BinOpMismatch₁ p) = BinOpMismatch₁ (≮:-heap-weakeningᴱ Γ H M h p)
@@ -251,10 +251,10 @@ reflect-weakeningᴼ H (just function f ⟨ var x ∈ T ⟩∈ U is B end) h (fu
 reflectᴱ : ∀ H M {H′ M′} → (H ⊢ M ⟶ᴱ M′ ⊣ H′) → Warningᴱ H′ (typeCheckᴱ H′ ∅ M′) → Either (Warningᴱ H (typeCheckᴱ H ∅ M)) (Warningᴴ H (typeCheckᴴ H))
 reflectᴮ : ∀ H B {H′ B′} → (H ⊢ B ⟶ᴮ B′ ⊣ H′) → Warningᴮ H′ (typeCheckᴮ H′ ∅ B′) → Either (Warningᴮ H (typeCheckᴮ H ∅ B)) (Warningᴴ H (typeCheckᴴ H))
 
-reflectᴱ H (M $ N) (app₁ s) (FunctionCallMismatch p) = cond (Left ∘ FunctionCallMismatch ∘ ≮:-heap-weakeningᴱ ∅ H N (rednᴱ⊑ s) ∘ any-src-≮: p) (Left ∘ app₁) (≮:-reductionᴱ H M s (src-any-≮: p))
+reflectᴱ H (M $ N) (app₁ s) (FunctionCallMismatch p) = cond (Left ∘ FunctionCallMismatch ∘ ≮:-heap-weakeningᴱ ∅ H N (rednᴱ⊑ s) ∘ any-src-≮: p {!!}) (Left ∘ app₁) (≮:-reductionᴱ H M s (src-any-≮: p))
 reflectᴱ H (M $ N) (app₁ s) (app₁ W′) = mapL app₁ (reflectᴱ H M s W′)
 reflectᴱ H (M $ N) (app₁ s) (app₂ W′) = Left (app₂ (reflect-weakeningᴱ ∅ H N (rednᴱ⊑ s) W′))
-reflectᴱ H (M $ N) (app₂ p s) (FunctionCallMismatch q) = cond (λ r → Left (FunctionCallMismatch (any-src-≮: r (≮:-heap-weakeningᴱ ∅ H M (rednᴱ⊑ s) (src-any-≮: r))))) (Left ∘ app₂) (≮:-reductionᴱ H N s q)
+reflectᴱ H (M $ N) (app₂ p s) (FunctionCallMismatch q) = cond (λ r → Left (FunctionCallMismatch (any-src-≮: r {!!} (≮:-heap-weakeningᴱ ∅ H M (rednᴱ⊑ s) (src-any-≮: r))))) (Left ∘ app₂) (≮:-reductionᴱ H N s q)
 reflectᴱ H (M $ N) (app₂ p s) (app₁ W′) = Left (app₁ (reflect-weakeningᴱ ∅ H M (rednᴱ⊑ s) W′))
 reflectᴱ H (M $ N) (app₂ p s) (app₂ W′) = mapL app₂ (reflectᴱ H N s W′)
 reflectᴱ H (val (addr a) $ N) (beta (function f ⟨ var x ∈ T ⟩∈ U is B end) v refl p) (BlockMismatch q) with ≮:-substitutivityᴮ H B v x q 
@@ -317,39 +317,39 @@ reflect* : ∀ H B {H′ B′} → (H ⊢ B ⟶* B′ ⊣ H′) → Either (Warn
 reflect* H B refl W = W
 reflect* H B (step s t) W = cond (reflectᴮ H B s) (reflectᴴᴮ H B s) (reflect* _ _ t W)
 
-isntNumber : ∀ H v → (valueType v ≢ number) → (typeOfᴱ H ∅ (val v) ≮: number)
-isntNumber H nil p = scalar-≢-impl-≮: nil number (λ ())
+isntNumber : ∀ H v → (valueType v ≢ num) → (typeOfᴱ H ∅ (val v) ≮: number)
+isntNumber H nil p = scalar-≢-impl-≮: NIL NUMBER (λ ())
 isntNumber H (addr a) p with remember (H [ a ]ᴴ)
-isntNumber H (addr a) p | (just (function f ⟨ var x ∈ T ⟩∈ U is B end) , q) = ≡-trans-≮: (cong orAny (cong typeOfᴹᴼ q)) (function-≮:-scalar number)
-isntNumber H (addr a) p | (nothing , q) = ≡-trans-≮: (cong orAny (cong typeOfᴹᴼ q)) (any-≮:-scalar number)
-isntNumber H (number x) p = CONTRADICTION (p refl)
-isntNumber H (bool x) p = scalar-≢-impl-≮: boolean number (λ ())
-isntNumber H (string x) p = scalar-≢-impl-≮: string number (λ ())
+isntNumber H (addr a) p | (just (function f ⟨ var x ∈ T ⟩∈ U is B end) , q) = ≡-trans-≮: (cong orAny (cong typeOfᴹᴼ q)) (function-≮:-scalar NUMBER)
+isntNumber H (addr a) p | (nothing , q) = ≡-trans-≮: (cong orAny (cong typeOfᴹᴼ q)) (any-≮:-scalar NUMBER)
+isntNumber H (num x) p = CONTRADICTION (p refl)
+isntNumber H (bool x) p = scalar-≢-impl-≮: BOOLEAN NUMBER (λ ())
+isntNumber H (str x) p = scalar-≢-impl-≮: STRING NUMBER (λ ())
 
-isntString : ∀ H v → (valueType v ≢ string) → (typeOfᴱ H ∅ (val v) ≮: string)
-isntString H nil p = scalar-≢-impl-≮: nil string (λ ())
+isntString : ∀ H v → (valueType v ≢ str) → (typeOfᴱ H ∅ (val v) ≮: string)
+isntString H nil p = scalar-≢-impl-≮: NIL STRING (λ ())
 isntString H (addr a) p with remember (H [ a ]ᴴ)
-isntString H (addr a) p | (just (function f ⟨ var x ∈ T ⟩∈ U is B end) , q) = ≡-trans-≮: (cong orAny (cong typeOfᴹᴼ q)) (function-≮:-scalar string)
-isntString H (addr a) p | (nothing , q) = ≡-trans-≮: (cong orAny (cong typeOfᴹᴼ q)) (any-≮:-scalar string)
-isntString H (number x) p = scalar-≢-impl-≮: number string (λ ())
-isntString H (bool x) p = scalar-≢-impl-≮: boolean string (λ ())
-isntString H (string x) p = CONTRADICTION (p refl)
+isntString H (addr a) p | (just (function f ⟨ var x ∈ T ⟩∈ U is B end) , q) = ≡-trans-≮: (cong orAny (cong typeOfᴹᴼ q)) (function-≮:-scalar STRING)
+isntString H (addr a) p | (nothing , q) = ≡-trans-≮: (cong orAny (cong typeOfᴹᴼ q)) (any-≮:-scalar STRING)
+isntString H (num x) p = scalar-≢-impl-≮: NUMBER STRING (λ ())
+isntString H (bool x) p = scalar-≢-impl-≮: BOOLEAN STRING (λ ())
+isntString H (str x) p = CONTRADICTION (p refl)
 
 isntFunction : ∀ H v {T U} → (valueType v ≢ function) → (typeOfᴱ H ∅ (val v) ≮: (T ⇒ U))
-isntFunction H nil p = scalar-≮:-function nil
+isntFunction H nil p = scalar-≮:-function NIL
 isntFunction H (addr a) p = CONTRADICTION (p refl)
-isntFunction H (number x) p = scalar-≮:-function number
-isntFunction H (bool x) p = scalar-≮:-function boolean
-isntFunction H (string x) p = scalar-≮:-function string
+isntFunction H (num x) p = scalar-≮:-function NUMBER
+isntFunction H (bool x) p = scalar-≮:-function BOOLEAN
+isntFunction H (str x) p = scalar-≮:-function STRING
 
 isntEmpty : ∀ H v → (typeOfᴱ H ∅ (val v) ≮: never)
-isntEmpty H nil = scalar-≮:-never nil
+isntEmpty H nil = scalar-≮:-never NIL
 isntEmpty H (addr a) with remember (H [ a ]ᴴ)
 isntEmpty H (addr a) | (just (function f ⟨ var x ∈ T ⟩∈ U is B end) , p) = ≡-trans-≮: (cong orAny (cong typeOfᴹᴼ p)) function-≮:-never
 isntEmpty H (addr a) | (nothing , p) = ≡-trans-≮: (cong orAny (cong typeOfᴹᴼ p)) any-≮:-never
-isntEmpty H (number x) = scalar-≮:-never number
-isntEmpty H (bool x) = scalar-≮:-never boolean
-isntEmpty H (string x) = scalar-≮:-never string
+isntEmpty H (num x) = scalar-≮:-never NUMBER
+isntEmpty H (bool x) = scalar-≮:-never BOOLEAN
+isntEmpty H (str x) = scalar-≮:-never STRING
 
 runtimeBinOpWarning : ∀ H {op} v → BinOpError op (valueType v) → (typeOfᴱ H ∅ (val v) ≮: srcBinOp op)
 runtimeBinOpWarning H v (+ p) = isntNumber H v p
@@ -367,7 +367,7 @@ runtimeWarningᴮ : ∀ H B → RuntimeErrorᴮ H B → Warningᴮ H (typeCheck�
 
 runtimeWarningᴱ H (var x) UnboundVariable = UnboundVariable refl
 runtimeWarningᴱ H (val (addr a)) (SEGV p) = UnallocatedAddress p
-runtimeWarningᴱ H (M $ N) (FunctionMismatch v w p) = FunctionCallMismatch (any-src-≮: (isntEmpty H w) (isntFunction H v p))
+runtimeWarningᴱ H (M $ N) (FunctionMismatch v w p) = FunctionCallMismatch (any-src-≮: (isntEmpty H w) {!!} (isntFunction H v p))
 runtimeWarningᴱ H (M $ N) (app₁ err) = app₁ (runtimeWarningᴱ H M err)
 runtimeWarningᴱ H (M $ N) (app₂ err) = app₂ (runtimeWarningᴱ H N err)
 runtimeWarningᴱ H (block var b ∈ T is B end) (block err) = block₁ (runtimeWarningᴮ H B err)
