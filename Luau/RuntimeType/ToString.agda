@@ -1,11 +1,11 @@
 module Luau.RuntimeType.ToString where
 
 open import FFI.Data.String using (String)
-open import Luau.RuntimeType using (RuntimeType; function; number; nil; boolean; string)
+open import Luau.RuntimeType using (RuntimeType; function; num; nil; bool; str)
 
 runtimeTypeToString : RuntimeType → String
 runtimeTypeToString function = "function"
-runtimeTypeToString number = "number"
+runtimeTypeToString num = "number"
 runtimeTypeToString nil = "nil"
-runtimeTypeToString boolean = "boolean"
-runtimeTypeToString string = "string"
+runtimeTypeToString bool = "boolean"
+runtimeTypeToString str = "string"
