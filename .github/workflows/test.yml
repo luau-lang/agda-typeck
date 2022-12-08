@@ -11,8 +11,8 @@ jobs:
     strategy:
       matrix:
         agda: [2.6.2.2]
-        hackageDate: ["2022-04-07"]
-        hackageTime: ["23:06:28"]
+        hackageDate: ["2022-12-08"]
+        hackageTime: ["00:41:16Z"]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
