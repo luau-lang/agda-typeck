@@ -6,7 +6,7 @@ open import Agda.Builtin.Equality using (_≡_; refl)
 open import FFI.Data.Either using (Either; Left; Right; mapLR; swapLR; cond)
 open import FFI.Data.Maybe using (Maybe; just; nothing)
 open import Luau.Subtyping using (_<:_; _≮:_; Value; Language; ¬Language; ALanguage; ¬ALanguage; RLanguage; ¬RLanguage; witness; any; never; scalar; scalar-function; scalar-scalar; scalar-error; scalar-warning; function-scalar; function-ok; function-nok; function-error; function-function; function-warning; left; right; _,_; _↦_; ⟨⟩; ⟨_⟩; error; warning; diverge; ⟨untyped⟩; one; none; untyped)
-open import Luau.Type using (Type; Scalar; scalar; error; never; unknown; _⇒_; _∪_; _∩_; any; number; string; NIL; NUMBER; STRING; BOOLEAN; _≡ˢ_)
+open import Luau.Type using (Type; Scalar; scalar; error; never; unknown; funktion;_⇒_; _∪_; _∩_; any; number; string; NIL; NUMBER; STRING; BOOLEAN; _≡ˢ_)
 open import Properties.Contradiction using (CONTRADICTION; ¬; ⊥)
 open import Properties.Dec using (Dec; yes; no)
 open import Properties.Equality using (_≢_)
@@ -301,6 +301,12 @@ language-comp (function-warning p) (function-warning q) = language-comp q p
 ≮:-function-right : ∀ {R S T U} → (T ≮: U) → (S ⇒ T) ≮: (R ⇒ U)
 ≮:-function-right (witness {error} p q) = witness (function-ok (error p)) (function-function none (error q))
 ≮:-function-right (witness {⟨ s ⟩} p q) = witness (function-ok (one p)) (function-function none (one q))
+
+function-<:-funktion : ∀ {S T} → (S ⇒ T) <: funktion
+function-<:-funktion = <:-function (λ ()) (λ p → any)
+
+function-<:-unknown : ∀ {S T} → (S ⇒ T) <: unknown
+function-<:-unknown p = left (left (left (left (function-<:-funktion p))))
 
 -- Properties of scalars
 scalar-<: : ∀ S {T} → Language T ⟨ scalar S ⟩ → (scalar S <: T)
