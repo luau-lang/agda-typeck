@@ -10,13 +10,14 @@ typeToStringᴵ : Type → String
 
 typeToString (S ⇒ T) = "(" ++ (typeToString S) ++ ") -> " ++ (typeToString T)
 typeToString never = "never"
-typeToString any = "unknown"
+typeToString any = "any"
 typeToString (scalar NIL) = "nil"
 typeToString (scalar NUMBER) = "number"
 typeToString (scalar BOOLEAN) = "boolean"
 typeToString (scalar STRING) = "string"
 typeToString error = "error"
 typeToString (S ∪ T) with normalizeOptional(S ∪ T)
+typeToString (S ∪ T) | (((((never ⇒ any) ∪ (scalar NUMBER)) ∪ (scalar STRING)) ∪ (scalar BOOLEAN)) ∪ (scalar NIL)) = "unknown"
 typeToString (S ∪ T) | ((S′ ⇒ T′) ∪ scalar NIL) = "(" ++ typeToString (S′ ⇒ T′) ++ ")?"
 typeToString (S ∪ T) | (S′ ∪ scalar NIL) = typeToString S′ ++ "?"
 typeToString (S ∪ T) | (S′ ∪ T′) = "(" ++ typeToStringᵁ (S ∪ T) ++ ")"
