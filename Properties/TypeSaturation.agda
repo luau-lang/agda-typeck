@@ -4,23 +4,23 @@ module Properties.TypeSaturation where
 
 open import Agda.Builtin.Equality using (_≡_; refl)
 open import FFI.Data.Either using (Either; Left; Right)
-open import Luau.Subtyping using (Tree; Language; ¬Language; _<:_; _≮:_; witness; scalar; function; function-err; function-ok; function-ok₁; function-ok₂; scalar-function; _,_; never)
+open import Luau.Subtyping using (Language; ¬Language; _<:_; _≮:_; _,_)
 open import Luau.Type using (Type; _⇒_; _∩_; _∪_; never; unknown)
 open import Luau.TypeNormalization using (_∩ⁿ_; _∪ⁿ_)
 open import Luau.TypeSaturation using (_⋓_; _⋒_; _∩ᵘ_; _∩ⁱ_; ∪-saturate; ∩-saturate; saturate)
-open import Properties.Subtyping using (dec-language; language-comp; <:-impl-⊇; <:-refl; <:-trans; <:-trans-≮:; <:-impl-¬≮: ; <:-never; <:-unknown; <:-function; <:-union; <:-∪-symm; <:-∪-left; <:-∪-right; <:-∪-lub; <:-∪-assocl; <:-∪-assocr; <:-intersect; <:-∩-symm; <:-∩-left; <:-∩-right; <:-∩-glb; ≮:-function-left; ≮:-function-right; <:-function-∩-∪; <:-function-∩-∩; <:-∩-assocl; <:-∩-assocr; ∩-<:-∪; <:-∩-distl-∪; ∩-distl-∪-<:; <:-∩-distr-∪; ∩-distr-∪-<:)
-open import Properties.TypeNormalization using (Normal; FunType; _⇒_; _∩_; _∪_; never; unknown; normal-∪ⁿ; normal-∩ⁿ; ∪ⁿ-<:-∪; ∪-<:-∪ⁿ; ∩ⁿ-<:-∩; ∩-<:-∩ⁿ)
+open import Properties.Subtyping using (dec-language; language-comp; <:-impl-⊇; <:-refl; <:-trans; <:-trans-≮:; <:-impl-¬≮: ; <:-never; <:-function; <:-union; <:-∪-symm; <:-∪-left; <:-∪-right; <:-∪-lub; <:-∪-assocl; <:-∪-assocr; <:-intersect; <:-∩-symm; <:-∩-left; <:-∩-right; <:-∩-glb; ≮:-function-left; ≮:-function-right; <:-function-∩-∪; <:-function-∩-∩; <:-∩-assocl; <:-∩-assocr; ∩-<:-∪; <:-∩-distl-∪; ∩-distl-∪-<:; <:-∩-distr-∪; ∩-distr-∪-<:)
+open import Properties.TypeNormalization using (Normal; FunType; _⇒_; _∩_; _∪_; never; normal-∪ⁿ; normal-∩ⁿ; ∪ⁿ-<:-∪; ∪-<:-∪ⁿ; ∩ⁿ-<:-∩; ∩-<:-∩ⁿ)
 open import Properties.Contradiction using (CONTRADICTION)
 open import Properties.Functions using (_∘_)
 
 -- Saturation preserves normalization
 normal-⋒ : ∀ {F G} → FunType F → FunType G → FunType (F ⋒ G)
-normal-⋒ (R ⇒ S) (T ⇒ U) = (normal-∩ⁿ R T) ⇒ (normal-∩ⁿ S U)
+normal-⋒ (R ⇒ S) (T ⇒ U) = ((R ∩ T) ⇒ (S ∩ U))
 normal-⋒ (R ⇒ S) (G ∩ H) = normal-⋒ (R ⇒ S) G ∩ normal-⋒ (R ⇒ S) H
 normal-⋒ (E ∩ F) G = normal-⋒ E G ∩ normal-⋒ F G
 
 normal-⋓ : ∀ {F G} → FunType F → FunType G → FunType (F ⋓ G)
-normal-⋓ (R ⇒ S) (T ⇒ U) = (normal-∪ⁿ R T) ⇒ (normal-∪ⁿ S U)
+normal-⋓ (R ⇒ S) (T ⇒ U) = (R ∪ T) ⇒ (S ∪ U)
 normal-⋓ (R ⇒ S) (G ∩ H) = normal-⋓ (R ⇒ S) G ∩ normal-⋓ (R ⇒ S) H
 normal-⋓ (E ∩ F) G = normal-⋓ E G ∩ normal-⋓ F G
 
@@ -48,12 +48,12 @@ saturate-<: : ∀ {F} → FunType F → saturate F <: F
 saturate-<: F = <:-trans (∪-saturate-<: (normal-∩-saturate F)) (∩-saturate-<: F)
 
 ∩-<:-⋓ : ∀ {F G} → FunType F → FunType G → (F ∩ G) <: (F ⋓ G)
-∩-<:-⋓ (R ⇒ S) (T ⇒ U) = <:-trans <:-function-∩-∪ (<:-function (∪ⁿ-<:-∪ R T) (∪-<:-∪ⁿ S U))
+∩-<:-⋓ (R ⇒ S) (T ⇒ U) = <:-function-∩-∪
 ∩-<:-⋓ (R ⇒ S) (G ∩ H) = <:-trans (<:-∩-glb (<:-intersect <:-refl <:-∩-left) (<:-intersect <:-refl <:-∩-right)) (<:-intersect (∩-<:-⋓ (R ⇒ S) G) (∩-<:-⋓ (R ⇒ S) H))
 ∩-<:-⋓ (E ∩ F) G = <:-trans (<:-∩-glb (<:-intersect <:-∩-left <:-refl) (<:-intersect <:-∩-right <:-refl)) (<:-intersect (∩-<:-⋓ E G) (∩-<:-⋓ F G))
 
 ∩-<:-⋒ : ∀ {F G} → FunType F → FunType G → (F ∩ G) <: (F ⋒ G)
-∩-<:-⋒ (R ⇒ S) (T ⇒ U) = <:-trans <:-function-∩-∩ (<:-function (∩ⁿ-<:-∩ R T) (∩-<:-∩ⁿ S U))
+∩-<:-⋒ (R ⇒ S) (T ⇒ U) = <:-function-∩-∩
 ∩-<:-⋒ (R ⇒ S) (G ∩ H) = <:-trans (<:-∩-glb (<:-intersect <:-refl <:-∩-left) (<:-intersect <:-refl <:-∩-right)) (<:-intersect (∩-<:-⋒ (R ⇒ S) G) (∩-<:-⋒ (R ⇒ S) H))
 ∩-<:-⋒ (E ∩ F) G = <:-trans (<:-∩-glb (<:-intersect <:-∩-left <:-refl) (<:-intersect <:-∩-right <:-refl)) (<:-intersect (∩-<:-⋒ E G) (∩-<:-⋒ F G))
 
@@ -74,16 +74,6 @@ data Overloads : Type → Type → Set where
    here : ∀ {S T} → Overloads (S ⇒ T) (S ⇒ T)
    left : ∀ {S T F G} → Overloads F (S ⇒ T) → Overloads (F ∩ G) (S ⇒ T)
    right : ∀ {S T F G} → Overloads G (S ⇒ T) → Overloads (F ∩ G) (S ⇒ T)
-
-normal-overload-src : ∀ {F S T} → FunType F → Overloads F (S ⇒ T) → Normal S
-normal-overload-src (S ⇒ T) here = S
-normal-overload-src (F ∩ G) (left o) = normal-overload-src F o
-normal-overload-src (F ∩ G) (right o) = normal-overload-src G o
-
-normal-overload-tgt : ∀ {F S T} → FunType F → Overloads F (S ⇒ T) → Normal T
-normal-overload-tgt (S ⇒ T) here = T
-normal-overload-tgt (F ∩ G) (left o) = normal-overload-tgt F o
-normal-overload-tgt (F ∩ G) (right o) = normal-overload-tgt G o
 
 -- An inductive presentation of the overloads of F ⋓ G
 data ∪-Lift (P Q : Type → Set) : Type → Set where
@@ -245,28 +235,28 @@ ov-<: (F ∩ G) (right o) p = <:-trans <:-∩-right (ov-<: G o p)
 ⊂:-overloads-right p = just (right p)
 
 ⊂:-overloads-⋒ : ∀ {F G} → FunType F → FunType G → ∩-Lift (Overloads F) (Overloads G) ⊂: Overloads (F ⋒ G)
-⊂:-overloads-⋒ (R ⇒ S) (T ⇒ U) (intersect here here) = defn here (∩-<:-∩ⁿ R T) (∩ⁿ-<:-∩ S U)
+⊂:-overloads-⋒ (R ⇒ S) (T ⇒ U) (intersect here here) = defn here <:-refl <:-refl
 ⊂:-overloads-⋒ (R ⇒ S) (G ∩ H) (intersect here (left o)) = ⊂:-overloads-⋒ (R ⇒ S) G (intersect here o) >>= ⊂:-overloads-left
 ⊂:-overloads-⋒ (R ⇒ S) (G ∩ H) (intersect here (right o)) = ⊂:-overloads-⋒ (R ⇒ S) H (intersect here o) >>= ⊂:-overloads-right
 ⊂:-overloads-⋒ (E ∩ F) G (intersect (left n) o) = ⊂:-overloads-⋒ E G (intersect n o) >>= ⊂:-overloads-left
 ⊂:-overloads-⋒ (E ∩ F) G (intersect (right n) o) = ⊂:-overloads-⋒ F G (intersect n o) >>= ⊂:-overloads-right
 
 ⊂:-⋒-overloads : ∀ {F G} → FunType F → FunType G → Overloads (F ⋒ G) ⊂: ∩-Lift (Overloads F) (Overloads G)
-⊂:-⋒-overloads (R ⇒ S) (T ⇒ U) here = defn (intersect here here) (∩ⁿ-<:-∩ R T) (∩-<:-∩ⁿ S U)
+⊂:-⋒-overloads (R ⇒ S) (T ⇒ U) here = defn (intersect here here) <:-refl <:-refl
 ⊂:-⋒-overloads (R ⇒ S) (G ∩ H) (left o) = ⊂:-⋒-overloads (R ⇒ S) G o >>= ⊂:-∩-lift ⊂:-refl ⊂:-overloads-left 
 ⊂:-⋒-overloads (R ⇒ S) (G ∩ H) (right o) = ⊂:-⋒-overloads (R ⇒ S) H o >>= ⊂:-∩-lift ⊂:-refl ⊂:-overloads-right
 ⊂:-⋒-overloads (E ∩ F) G (left o) = ⊂:-⋒-overloads E G o >>= ⊂:-∩-lift ⊂:-overloads-left ⊂:-refl
 ⊂:-⋒-overloads (E ∩ F) G (right o) = ⊂:-⋒-overloads F G o >>= ⊂:-∩-lift ⊂:-overloads-right ⊂:-refl
 
 ⊂:-overloads-⋓ : ∀ {F G} → FunType F → FunType G → ∪-Lift (Overloads F) (Overloads G) ⊂: Overloads (F ⋓ G)
-⊂:-overloads-⋓ (R ⇒ S) (T ⇒ U) (union here here) = defn here (∪-<:-∪ⁿ R T) (∪ⁿ-<:-∪ S U)
+⊂:-overloads-⋓ (R ⇒ S) (T ⇒ U) (union here here) = defn here <:-refl <:-refl
 ⊂:-overloads-⋓ (R ⇒ S) (G ∩ H) (union here (left o)) = ⊂:-overloads-⋓ (R ⇒ S) G (union here o) >>= ⊂:-overloads-left
 ⊂:-overloads-⋓ (R ⇒ S) (G ∩ H) (union here (right o)) = ⊂:-overloads-⋓ (R ⇒ S) H (union here o) >>= ⊂:-overloads-right
 ⊂:-overloads-⋓ (E ∩ F) G (union (left n) o) = ⊂:-overloads-⋓ E G (union n o) >>= ⊂:-overloads-left
 ⊂:-overloads-⋓ (E ∩ F) G (union (right n) o) = ⊂:-overloads-⋓ F G (union n o) >>= ⊂:-overloads-right
 
 ⊂:-⋓-overloads : ∀ {F G} → FunType F → FunType G → Overloads (F ⋓ G) ⊂: ∪-Lift (Overloads F) (Overloads G)
-⊂:-⋓-overloads (R ⇒ S) (T ⇒ U) here = defn (union here here) (∪ⁿ-<:-∪ R T) (∪-<:-∪ⁿ S U)
+⊂:-⋓-overloads (R ⇒ S) (T ⇒ U) here = defn (union here here) <:-refl <:-refl
 ⊂:-⋓-overloads (R ⇒ S) (G ∩ H) (left o) = ⊂:-⋓-overloads (R ⇒ S) G o >>= ⊂:-∪-lift ⊂:-refl ⊂:-overloads-left
 ⊂:-⋓-overloads (R ⇒ S) (G ∩ H) (right o) = ⊂:-⋓-overloads (R ⇒ S) H o >>= ⊂:-∪-lift ⊂:-refl ⊂:-overloads-right
 ⊂:-⋓-overloads (E ∩ F) G (left o) = ⊂:-⋓-overloads E G o >>= ⊂:-∪-lift ⊂:-overloads-left ⊂:-refl

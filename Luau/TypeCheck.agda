@@ -6,20 +6,20 @@ open import Agda.Builtin.Equality using (_≡_)
 open import FFI.Data.Either using (Either; Left; Right)
 open import FFI.Data.Maybe using (Maybe; just)
 open import Luau.ResolveOverloads using (resolve)
-open import Luau.Syntax using (Expr; Stat; Block; BinaryOperator; yes; nil; addr; number; bool; string; val; var; var_∈_; _⟨_⟩∈_; function_is_end; _$_; block_is_end; binexp; local_←_; _∙_; done; return; name; +; -; *; /; <; >; ==; ~=; <=; >=; ··)
+open import Luau.Syntax using (Expr; Stat; Block; BinaryOperator; yes; nil; addr; num; bool; str; val; var; var_∈_; _⟨_⟩∈_; function_is_end; _$_; block_is_end; binexp; local_←_; _∙_; done; return; name; +; -; *; /; <; >; ==; ~=; <=; >=; ··)
 open import Luau.Var using (Var)
 open import Luau.Addr using (Addr)
 open import Luau.Heap using (Heap; Object; function_is_end) renaming (_[_] to _[_]ᴴ)
-open import Luau.Type using (Type; nil; unknown; number; boolean; string; _⇒_)
+open import Luau.Type using (Type; nill; any; number; boolean; string; _⇒_)
 open import Luau.VarCtxt using (VarCtxt; ∅; _⋒_; _↦_; _⊕_↦_; _⊝_) renaming (_[_] to _[_]ⱽ)
 open import FFI.Data.Vector using (Vector)
 open import FFI.Data.Maybe using (Maybe; just; nothing)
 open import Properties.DecSubtyping using (dec-subtyping)
 open import Properties.Product using (_×_; _,_)
 
-orUnknown : Maybe Type → Type
-orUnknown nothing = unknown
-orUnknown (just T) = T
+orAny : Maybe Type → Type
+orAny nothing = any
+orAny (just T) = T
 
 srcBinOp : BinaryOperator → Type
 srcBinOp + = number
@@ -28,8 +28,8 @@ srcBinOp * = number
 srcBinOp / = number
 srcBinOp < = number
 srcBinOp > = number
-srcBinOp == = unknown
-srcBinOp ~= = unknown
+srcBinOp == = any
+srcBinOp ~= = any
 srcBinOp <= = number
 srcBinOp >= = number
 srcBinOp ·· = string
@@ -55,7 +55,7 @@ data _⊢ᴮ_∈_ where
   done : ∀ {Γ} →
 
     ---------------
-    Γ ⊢ᴮ done ∈ nil
+    Γ ⊢ᴮ done ∈ nill
 
   return : ∀ {M B T U Γ} →
 
@@ -83,11 +83,11 @@ data _⊢ᴱ_∈_ where
   nil : ∀ {Γ} →
 
     --------------------
-    Γ ⊢ᴱ (val nil) ∈ nil
+    Γ ⊢ᴱ (val nil) ∈ nill
 
   var : ∀ {x T Γ} →
 
-    T ≡ orUnknown(Γ [ x ]ⱽ) →
+    T ≡ orAny(Γ [ x ]ⱽ) →
     ----------------
     Γ ⊢ᴱ (var x) ∈ T
 
@@ -96,20 +96,20 @@ data _⊢ᴱ_∈_ where
     -----------------
     Γ ⊢ᴱ val(addr a) ∈ T
 
-  number : ∀ {n Γ} →
+  num : ∀ {n Γ} →
 
     ---------------------------
-    Γ ⊢ᴱ val(number n) ∈ number
+    Γ ⊢ᴱ val(num n) ∈ number
 
   bool : ∀ {b Γ} →
 
     --------------------------
     Γ ⊢ᴱ val(bool b) ∈ boolean
   
-  string : ∀ {x Γ} →
+  str : ∀ {x Γ} →
 
     ---------------------------
-    Γ ⊢ᴱ val(string x) ∈ string
+    Γ ⊢ᴱ val(str x) ∈ string
 
   app : ∀ {M N T U Γ} →
 

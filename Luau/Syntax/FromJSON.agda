@@ -2,7 +2,7 @@
 
 module Luau.Syntax.FromJSON where
 
-open import Luau.Syntax using (Block; Stat ; Expr; _$_; val; nil; bool; number; var; var_∈_; function_is_end; _⟨_⟩; _⟨_⟩∈_; local_←_; return; done; _∙_; maybe; VarDec;  binexp; BinaryOperator; +; -; *; /; ==; ~=; <; >; <=; >=; ··; string)
+open import Luau.Syntax using (Block; Stat ; Expr; _$_; val; nil; bool; num; str; var; var_∈_; function_is_end; _⟨_⟩; _⟨_⟩∈_; local_←_; return; done; _∙_; maybe; VarDec;  binexp; BinaryOperator; +; -; *; /; ==; ~=; <; >; <=; >=; ··)
 open import Luau.Type.FromJSON using (typeFromJSON)
 
 open import Agda.Builtin.List using (List; _∷_; [])
@@ -123,11 +123,11 @@ exprFromObject obj | just (string "AstExprLocal") | just x | Right x′ = Right 
 exprFromObject obj | just (string "AstExprLocal") | just x | Left err = Left err
 exprFromObject obj | just (string "AstExprLocal") | nothing = Left "AstExprLocal missing local"
 exprFromObject obj | just (string "AstExprConstantNumber") with lookup value obj
-exprFromObject obj | just (string "AstExprConstantNumber") | just (FFI.Data.Aeson.Value.number x) = Right (val (number (toFloat x)))
+exprFromObject obj | just (string "AstExprConstantNumber") | just (FFI.Data.Aeson.Value.number x) = Right (val (num (toFloat x)))
 exprFromObject obj | just (string "AstExprConstantNumber") | just _ = Left "AstExprConstantNumber value is not a number"
 exprFromObject obj | just (string "AstExprConstantNumber") | nothing = Left "AstExprConstantNumber missing value"
 exprFromObject obj | just (string "AstExprConstantString") with lookup value obj
-exprFromObject obj | just (string "AstExprConstantString") | just (string x) = Right (val (string x))
+exprFromObject obj | just (string "AstExprConstantString") | just (string x) = Right (val (str x))
 exprFromObject obj | just (string "AstExprConstantString") | just _ = Left "AstExprConstantString value is not a string"
 exprFromObject obj | just (string "AstExprConstantString") | nothing = Left "AstExprConstantString missing value"
 exprFromObject obj | just (string "AstExprConstantBool") with lookup value obj
