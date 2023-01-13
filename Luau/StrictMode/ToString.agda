@@ -58,7 +58,6 @@ warningToStringᴱ (binexp M op N) (BinOpMismatch₁ {T = T} p) = "Binary operat
 warningToStringᴱ (binexp M op N) (BinOpMismatch₂ {U = U} p) = "Binary operator " ++ binOpToString op ++ " rhs has type " ++ typeToString U ++ subtypeWarningToString p
 warningToStringᴱ (binexp M op N) (bin₁ W) = warningToStringᴱ M W
 warningToStringᴱ (binexp M op N) (bin₂ W) = warningToStringᴱ N W
-warningToStringᴱ M (Unsafe {T = T} q) = "Unsafe type " ++ typeToString T
 
 warningToStringᴮ (function f ⟨ var x ∈ T ⟩∈ U is C end ∙ B) (FunctionDefnMismatch {V = V} p) = "Function declaration " ++ varToString f ++ " has return type " ++ typeToString U ++ " but body returns " ++ typeToString V ++ subtypeWarningToString p
 warningToStringᴮ (function f ⟨ var x ∈ T ⟩∈ U is C end ∙ B) (function₁ W) = warningToStringᴮ C W ++ "\n  in function declaration " ++ varToString f

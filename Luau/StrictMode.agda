@@ -3,9 +3,10 @@
 module Luau.StrictMode where
 
 open import Agda.Builtin.Equality using (_≡_)
+open import Agda.Builtin.Unit using (⊤)
 open import FFI.Data.Maybe using (just; nothing)
 open import Luau.Syntax using (Expr; Stat; Block; BinaryOperator; yes; nil; addr; var; binexp; var_∈_; _⟨_⟩∈_; function_is_end; _$_; block_is_end; local_←_; _∙_; done; return; name; +; -; *; /; <; >; <=; >=; ··)
-open import Luau.Type using (Type; unknown; _⇒_; _∪_; _∩_)
+open import Luau.Type using (Type; unknown; any; error; _⇒_; _∪_; _∩_)
 open import Luau.ResolveOverloads using (src; resolve)
 open import Luau.Subtyping using (_<:_; _≮:_)
 open import Luau.Heap using (Heap; function_is_end) renaming (_[_] to _[_]ᴴ)
@@ -15,16 +16,20 @@ open import Properties.Contradiction using (¬)
 open import Properties.TypeCheck using (typeCheckᴮ)
 open import Properties.Product using (_,_)
 
+data Warningᵀ : Type → Set where
+
+  any : Warningᵀ any
+  error : Warningᵀ error
+  _,_ : ∀ {T U} → Warningᵀ T → Warningᵀ U → Warningᵀ (T ∩ U)
+  left : ∀ {T U} → Warningᵀ T → Warningᵀ (T ∪ U)
+  right : ∀ {T U} → Warningᵀ U → Warningᵀ (T ∪ U)
+  param : ∀ {T U} → Warningᵀ T → Warningᵀ (T ⇒ U)
+  result : ∀ {T U} → Warningᵀ U → Warningᵀ (T ⇒ U)
+
 data Warningᴱ (H : Heap yes) {Γ} : ∀ {M T} → (Γ ⊢ᴱ M ∈ T) → Set
 data Warningᴮ (H : Heap yes) {Γ} : ∀ {B T} → (Γ ⊢ᴮ B ∈ T) → Set
 
 data Warningᴱ H {Γ} where
-
-  Unsafe : ∀ {M T} {D : Γ ⊢ᴱ M ∈ T} →
-
-    (T ≮: unknown) →
-    ----------------
-    Warningᴱ H D
 
   UnallocatedAddress : ∀ {a T} →
 
@@ -104,13 +109,19 @@ data Warningᴱ H {Γ} where
     ------------------------------
     Warningᴱ H (block {b} {T = T} D)
 
+  UnsafeBlock : ∀ {b B T U} {D : Γ ⊢ᴮ B ∈ U} →
+
+    Warningᵀ T →
+    ------------------------------
+    Warningᴱ H (block {b} {T = T} D)
+
+  UnsafeFunction : ∀ {f x B T U V} {D : (Γ ⊕ x ↦ T) ⊢ᴮ B ∈ V} →
+
+    Warningᵀ (T ⇒ U) →
+    -------------------------
+    Warningᴱ H (function {f} {T = T} {U = U} D)
+
 data Warningᴮ H {Γ} where
-
-  Unsafe : ∀ {B T} {D : Γ ⊢ᴮ B ∈ T} →
-
-    (T ≮: unknown) →
-    ----------------
-    Warningᴮ H D
 
   return : ∀ {M B T U} {D₁ : Γ ⊢ᴱ M ∈ T} {D₂ : Γ ⊢ᴮ B ∈ U} →
 
@@ -154,6 +165,18 @@ data Warningᴮ H {Γ} where
     --------------------
     Warningᴮ H (function D₁ D₂)
 
+  UnsafeLocal : ∀ {x M B T U V} {D₁ : Γ ⊢ᴱ M ∈ U} {D₂ : (Γ ⊕ x ↦ T) ⊢ᴮ B ∈ V} →
+
+    Warningᵀ T →
+    --------------------
+    Warningᴮ H (local D₁ D₂)
+
+  UnsafeFunction : ∀ {f x B C T U V W} {D₁ : (Γ ⊕ x ↦ T) ⊢ᴮ C ∈ V} {D₂ : (Γ ⊕ f ↦ (T ⇒ U)) ⊢ᴮ B ∈ W} →
+
+    Warningᵀ (T ⇒ U) →
+    --------------------
+    Warningᴮ H (function D₁ D₂)
+    
 data Warningᴼ (H : Heap yes) : ∀ {V} → (⊢ᴼ V) → Set where
 
   FunctionDefnMismatch : ∀ {f x B T U V} {D : (x ↦ T) ⊢ᴮ B ∈ V} →

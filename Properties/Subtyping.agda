@@ -312,6 +312,12 @@ function-<:-unknown p = left (left (left (left (function-<:-funktion p))))
 scalar-<: : ∀ S {T} → Language T ⟨ scalar S ⟩ → (scalar S <: T)
 scalar-<: S p (scalar S) = p
 
+scalar-<:-unknown : ∀ {S} → (scalar S <: unknown)
+scalar-<:-unknown {NUMBER} p = left (left (left (right p)))
+scalar-<:-unknown {BOOLEAN} p = right p
+scalar-<:-unknown {STRING} p = left (left (right p))
+scalar-<:-unknown {NIL} p = left (right p)
+
 function-∩-scalar-<:-never : ∀ S {T U V} → ((T ⇒ U) ∩ scalar S) <: V
 function-∩-scalar-<:-never S (() , scalar S)
 
