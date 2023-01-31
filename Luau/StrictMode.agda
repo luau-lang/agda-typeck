@@ -4,9 +4,10 @@ module Luau.StrictMode where
 
 open import Agda.Builtin.Equality using (_≡_)
 open import Agda.Builtin.Unit using (⊤)
+open import FFI.Data.Either using (Either; Left; Right; mapL; mapR; mapLR; swapLR; cond)
 open import FFI.Data.Maybe using (just; nothing)
 open import Luau.Syntax using (Expr; Stat; Block; BinaryOperator; yes; nil; addr; var; binexp; var_∈_; _⟨_⟩∈_; function_is_end; _$_; block_is_end; local_←_; _∙_; done; return; name; +; -; *; /; <; >; <=; >=; ··)
-open import Luau.Type using (Type; unknown; any; error; _⇒_; _∪_; _∩_)
+open import Luau.Type using (Type; unknown; never; any; error; funktion; scalar; _⇒_; _∪_; _∩_)
 open import Luau.ResolveOverloads using (src; resolve)
 open import Luau.Subtyping using (_<:_; _≮:_)
 open import Luau.Heap using (Heap; function_is_end) renaming (_[_] to _[_]ᴴ)
@@ -26,6 +27,14 @@ data Warningᵀ : Type → Set where
   param : ∀ {T U} → Warningᵀ T → Warningᵀ (T ⇒ U)
   result : ∀ {T U} → Warningᵀ U → Warningᵀ (T ⇒ U)
 
+data ¬Warningᵀ : Type → Set where
+
+  _,_ : ∀ {T U} → ¬Warningᵀ T → ¬Warningᵀ U → ¬Warningᵀ (T ∪ U)
+  left : ∀ {T U} → ¬Warningᵀ T → ¬Warningᵀ (T ∩ U)
+  right : ∀ {T U} → ¬Warningᵀ U → ¬Warningᵀ (T ∩ U)
+  function : ∀ {T U} → ¬Warningᵀ T → ¬Warningᵀ U → ¬Warningᵀ (T ⇒ U)
+  scalar : ∀ S → ¬Warningᵀ(scalar S)
+
 data Warningᴱ (H : Heap yes) {Γ} : ∀ {M T} → (Γ ⊢ᴱ M ∈ T) → Set
 data Warningᴮ (H : Heap yes) {Γ} : ∀ {B T} → (Γ ⊢ᴮ B ∈ T) → Set
 
@@ -42,6 +51,12 @@ data Warningᴱ H {Γ} where
     (Γ [ x ]ⱽ ≡ nothing) →
     ------------------------
     Warningᴱ H (var {x} {T} p)
+
+  NotFunctionCall : ∀ {M N T U} {D₁ : Γ ⊢ᴱ M ∈ T} {D₂ : Γ ⊢ᴱ N ∈ U} →
+
+    (T ≮: funktion) →
+    -----------------
+    Warningᴱ H (app D₁ D₂)
 
   FunctionCallMismatch : ∀ {M N T U} {D₁ : Γ ⊢ᴱ M ∈ T} {D₂ : Γ ⊢ᴱ N ∈ U} →
 
@@ -188,6 +203,12 @@ data Warningᴼ (H : Heap yes) : ∀ {V} → (⊢ᴼ V) → Set where
   function₁ : ∀ {f x B T U V} {D : (x ↦ T) ⊢ᴮ B ∈ V} →
 
     Warningᴮ H D →
+    ---------------------------------
+    Warningᴼ H (function {f} {U = U} D)
+
+  UnsafeFunction : ∀ {f x B T U V} {D : (x ↦ T) ⊢ᴮ B ∈ V} →
+
+    Warningᵀ (T ⇒ U) →
     ---------------------------------
     Warningᴼ H (function {f} {U = U} D)
 
