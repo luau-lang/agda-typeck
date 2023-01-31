@@ -21,7 +21,7 @@ data Warningᵀ : Type → Set where
 
   any : Warningᵀ any
   error : Warningᵀ error
-  _,_ : ∀ {T U} → Warningᵀ T → Warningᵀ U → Warningᵀ (T ∩ U)
+  intersect : ∀ {T U} → Warningᵀ T → Warningᵀ U → Warningᵀ (T ∩ U)
   left : ∀ {T U} → Warningᵀ T → Warningᵀ (T ∪ U)
   right : ∀ {T U} → Warningᵀ U → Warningᵀ (T ∪ U)
   param : ∀ {T U} → Warningᵀ T → Warningᵀ (T ⇒ U)
@@ -29,7 +29,8 @@ data Warningᵀ : Type → Set where
 
 data ¬Warningᵀ : Type → Set where
 
-  _,_ : ∀ {T U} → ¬Warningᵀ T → ¬Warningᵀ U → ¬Warningᵀ (T ∪ U)
+  never : ¬Warningᵀ never
+  union : ∀ {T U} → ¬Warningᵀ T → ¬Warningᵀ U → ¬Warningᵀ (T ∪ U)
   left : ∀ {T U} → ¬Warningᵀ T → ¬Warningᵀ (T ∩ U)
   right : ∀ {T U} → ¬Warningᵀ U → ¬Warningᵀ (T ∩ U)
   function : ∀ {T U} → ¬Warningᵀ T → ¬Warningᵀ U → ¬Warningᵀ (T ⇒ U)

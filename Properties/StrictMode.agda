@@ -8,7 +8,7 @@ open import FFI.Data.Either using (Either; Left; Right; mapL; mapR; mapLR; swapL
 open import FFI.Data.Maybe using (Maybe; just; nothing)
 open import Luau.Heap using (Heap; Object; function_is_end; defn; alloc; ok; next; lookup-not-allocated) renaming (_≡_⊕_↦_ to _≡ᴴ_⊕_↦_; _[_] to _[_]ᴴ; ∅ to ∅ᴴ)
 open import Luau.ResolveOverloads using (src; resolve)
-open import Luau.StrictMode using (Warningᴱ; Warningᴮ; Warningᴼ; Warningᴴ; Warningᵀ; ¬Warningᵀ; UnallocatedAddress; UnboundVariable; FunctionCallMismatch; NotFunctionCall; app₁; app₂; BinOpMismatch₁; BinOpMismatch₂; bin₁; bin₂; BlockMismatch; block₁; return; LocalVarMismatch; local₁; local₂; FunctionDefnMismatch; function₁; function₂; heap; expr; block; addr; param; result; UnsafeBlock; UnsafeLocal; UnsafeFunction; any; error; left; right; _,_)
+open import Luau.StrictMode using (Warningᴱ; Warningᴮ; Warningᴼ; Warningᴴ; Warningᵀ; ¬Warningᵀ; UnallocatedAddress; UnboundVariable; FunctionCallMismatch; NotFunctionCall; app₁; app₂; BinOpMismatch₁; BinOpMismatch₂; bin₁; bin₂; BlockMismatch; block₁; return; LocalVarMismatch; local₁; local₂; FunctionDefnMismatch; union; intersect; function; function₁; function₂; heap; expr; block; addr; param; result; UnsafeBlock; UnsafeLocal; UnsafeFunction; any; error; left; right; scalar; never)
 open import Luau.Substitution using (_[_/_]ᴮ; _[_/_]ᴱ; _[_/_]ᴮunless_; var_[_/_]ᴱwhenever_)
 open import Luau.Subtyping using (_<:_; _≮:_; witness; any; never; scalar; scalar-function; scalar-scalar; function-scalar; function-ok; left; right; _,_; Language; ¬Language)
 open import Luau.Syntax using (Expr; yes; var; val; var_∈_; _⟨_⟩∈_; _$_; addr; num; bool; str; binexp; nil; function_is_end; block_is_end; done; return; local_←_; _∙_; fun; arg; name; ==; ~=; +; -; *; /; <; >; <=; >=; ··)
@@ -19,7 +19,7 @@ open import Luau.Addr using (_≡ᴬ_)
 open import Luau.VarCtxt using (VarCtxt; ∅; _⋒_; _↦_; _⊕_↦_; _⊝_; ⊕-lookup-miss; ⊕-swap; ⊕-over) renaming (_[_] to _[_]ⱽ)
 open import Luau.VarCtxt using (VarCtxt; ∅)
 open import Properties.Remember using (remember; _,_)
-open import Properties.Equality using (_≢_; sym; cong; trans; subst₁)
+open import Properties.Equality using (_≢_; sym; cong; trans; subst₁; cong₂)
 open import Properties.Dec using (Dec; yes; no)
 open import Properties.Contradiction using (CONTRADICTION; ¬)
 open import Properties.Functions using (_∘_)
@@ -66,19 +66,24 @@ lookup-⊑-nothing {H} a (snoc defn) p | yes refl = refl
 lookup-⊑-nothing {H} a (snoc o) p | no q = trans (lookup-not-allocated o q) p
 
 dec-Warningᵀ : ∀ T → Either (Warningᵀ T) (¬Warningᵀ T)
-dec-Warningᵀ (scalar S) = Right (¬Warningᵀ.scalar S)
-dec-Warningᵀ (S ⇒ T) = {!!}
-dec-Warningᵀ never = {!!}
+dec-Warningᵀ (scalar S) = Right (scalar S)
+dec-Warningᵀ (S ⇒ T) = cond (Left ∘ param) (λ ¬Wˢ → mapLR result (function ¬Wˢ) (dec-Warningᵀ T)) (dec-Warningᵀ S)
+dec-Warningᵀ never = Right never
 dec-Warningᵀ any = Left any
 dec-Warningᵀ error = Left error
-dec-Warningᵀ (T ∪ U) = {!!}
-dec-Warningᵀ (T ∩ U) = {!!}
+dec-Warningᵀ (T ∪ U) = cond (Left ∘ left) (λ ¬Wᵀ → mapLR right (union ¬Wᵀ) (dec-Warningᵀ U)) (dec-Warningᵀ T)
+dec-Warningᵀ (T ∩ U) = cond (λ Wᵀ → mapLR (intersect Wᵀ) right (dec-Warningᵀ U)) (Right ∘ left) (dec-Warningᵀ T)
 
-warning-comp : ∀ {T} → ¬Warningᵀ T → ¬(Warningᵀ T)
-warning-comp V W = {!!}
+-- warning-comp : ∀ {T} → ¬Warningᵀ T → ¬(Warningᵀ T)
+-- warning-comp V W = {!!}
 
 <:-unknown : ∀ {T} → ¬Warningᵀ T → (T <: unknown)
-<:-unknown = {!!}
+<:-unknown never = <:-never
+<:-unknown (union ¬W ¬W′) = <:-∪-lub (<:-unknown ¬W) (<:-unknown ¬W′)
+<:-unknown (left ¬W) = <:-trans <:-∩-left (<:-unknown ¬W)
+<:-unknown (right ¬W) = <:-trans <:-∩-right (<:-unknown ¬W)
+<:-unknown (function ¬W ¬W′) = function-<:-unknown
+<:-unknown (scalar S) = scalar-<:-unknown
 
 data Warningⱽ (Γ : VarCtxt) : Set where
 
@@ -121,11 +126,11 @@ mapᴮᴱ+ f (block W) = expr (f W)
 mapᴮᴱ+ f (heap W) = heap W
 mapᴮᴱ+ f (ctxt W) = ctxt W
 
-tgt : Type → Type
-tgt T = resolve T (src T)
+-- tgt : Type → Type
+-- tgt T = resolve T (src T)
 
-conjecture : ∀ {F} → (F <: funktion) → Either (Warningᵀ F) (tgt F <: unknown)
-conjecture = {!!}
+-- conjecture : ∀ {F} → (F <: funktion) → Either (Warningᵀ F) (tgt F <: unknown)
+-- conjecture = {!!}
 
 Warningᵀ-impl-Warningᴱ : ∀ H Γ M → Warningᵀ (typeOfᴱ H Γ M) → (Warningᴱ+ H Γ M)
 Warningᵀ-impl-Warningᴮ : ∀ H Γ B → Warningᵀ (typeOfᴮ H Γ B) → (Warningᴮ+ H Γ B)
@@ -217,6 +222,24 @@ Warningᵀ-impl-Warningᴮ = {!!}
 
 ≮:-heap-weakeningᴮ : ∀ Γ H B {H′ U} → (H ⊑ H′) → (typeOfᴮ H′ Γ B ≮: U) → (typeOfᴮ H Γ B ≮: U)
 ≮:-heap-weakeningᴮ Γ H B h p = <:-trans-≮: (<:-heap-weakeningᴮ Γ H B h) p
+
+≡-heap-weakeningᴱ : ∀ Γ H M {H′} → (H ⊑ H′) → Either (Warningᴱ H (typeCheckᴱ H Γ M)) (typeOfᴱ H′ Γ M ≡ typeOfᴱ H Γ M)
+≡-heap-weakeningᴱ Γ H (var x) h = Right refl
+≡-heap-weakeningᴱ Γ H (val nil) h = Right refl
+≡-heap-weakeningᴱ Γ H (val (addr a)) refl = Right refl
+≡-heap-weakeningᴱ Γ H (val (addr a)) (snoc {a = b} q) with a ≡ᴬ b
+≡-heap-weakeningᴱ Γ H (val (addr a)) (snoc {a = a} defn) | yes refl = Left (UnallocatedAddress refl)
+≡-heap-weakeningᴱ Γ H (val (addr a)) (snoc {a = b} q) | no r = Right (sym (cong orAny (cong typeOfᴹᴼ (lookup-not-allocated q r))))
+≡-heap-weakeningᴱ Γ H (val (num n)) h = Right refl
+≡-heap-weakeningᴱ Γ H (val (bool b)) h = Right refl
+≡-heap-weakeningᴱ Γ H (val (str s)) h = Right refl
+≡-heap-weakeningᴱ Γ H (M $ N) h with ≡-heap-weakeningᴱ Γ H M h | ≡-heap-weakeningᴱ Γ H N h
+≡-heap-weakeningᴱ Γ H (M $ N) h | Left W | _ = Left (app₁ W)
+≡-heap-weakeningᴱ Γ H (M $ N) h | _ | Left W = Left (app₂ W)
+≡-heap-weakeningᴱ Γ H (M $ N) h | Right p | Right q = Right (cong₂ resolve p q)
+≡-heap-weakeningᴱ Γ H (function f ⟨ var x ∈ S ⟩∈ T is B end) h = Right refl
+≡-heap-weakeningᴱ Γ H (block var b ∈ T is N end) h = Right refl
+≡-heap-weakeningᴱ Γ H (binexp M op N) h = Right refl
 
 binOpPreservation : ∀ H {op v w x} → (v ⟦ op ⟧ w ⟶ x) → (tgtBinOp op ≡ typeOfᴱ H ∅ (val x))
 binOpPreservation H (+ m n) = refl
@@ -383,12 +406,13 @@ reflect-weakeningᴮ : ∀ Γ H B {H′} → (H ⊑ H′) → Warningᴮ H′ (t
 
 reflect-weakeningᴱ Γ H (var x) h (UnboundVariable p) = (UnboundVariable p)
 reflect-weakeningᴱ Γ H (val (addr a)) h (UnallocatedAddress p) = UnallocatedAddress (lookup-⊑-nothing a h p)
-reflect-weakeningᴱ Γ H (M $ N) h (NotFunctionCall W) = {!!}
-reflect-weakeningᴱ Γ H (M $ N) h (FunctionCallMismatch p) with dec-Warningᵀ (typeOfᴱ H Γ M)
-reflect-weakeningᴱ Γ H (M $ N) h (FunctionCallMismatch p) | Left W = {!!} -- app₁ (Warningᵀ-impl-Warningᴱ H Γ M W)
-reflect-weakeningᴱ Γ H (M $ N) h (FunctionCallMismatch p) | Right q = FunctionCallMismatch (≮:-heap-weakeningᴱ Γ H N h (any-src-≮: p (<:-unknown q) (≮:-heap-weakeningᴱ Γ H M h (src-any-≮: p))))
-reflect-weakeningᴱ Γ H (M $ N) h (app₁ W) = app₁ (reflect-weakeningᴱ Γ H M h W)
-reflect-weakeningᴱ Γ H (M $ N) h (app₂ W) = app₂ (reflect-weakeningᴱ Γ H N h W)
+reflect-weakeningᴱ Γ H (M $ N) h W′ with ≡-heap-weakeningᴱ Γ H M h | ≡-heap-weakeningᴱ Γ H N h
+reflect-weakeningᴱ Γ H (M $ N) h W′ | Left W | _ = app₁ W
+reflect-weakeningᴱ Γ H (M $ N) h W′ | _ | Left W = app₂ W
+reflect-weakeningᴱ Γ H (M $ N) h (NotFunctionCall p) | Right q | Right r = NotFunctionCall (≡-trans-≮: (sym q) p)
+reflect-weakeningᴱ Γ H (M $ N) h (FunctionCallMismatch p) | Right q | Right r = FunctionCallMismatch (≡-trans-≮: (sym r) (≮:-trans-≡ p (cong src q)))
+reflect-weakeningᴱ Γ H (M $ N) h (app₁ W′) | Right q | Right r = app₁ (reflect-weakeningᴱ Γ H M h W′)
+reflect-weakeningᴱ Γ H (M $ N) h (app₂ W′) | Right q | Right r = app₂ (reflect-weakeningᴱ Γ H N h W′)
 reflect-weakeningᴱ Γ H (binexp M op N) h (BinOpMismatch₁ p) = BinOpMismatch₁ (≮:-heap-weakeningᴱ Γ H M h p)
 reflect-weakeningᴱ Γ H (binexp M op N) h (BinOpMismatch₂ p) = BinOpMismatch₂ (≮:-heap-weakeningᴱ Γ H N h p)
 reflect-weakeningᴱ Γ H (binexp M op N) h (bin₁ W′) = bin₁ (reflect-weakeningᴱ Γ H M h W′)

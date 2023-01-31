@@ -12,6 +12,9 @@ trans refl refl = refl
 cong : ∀ {A B : Set} {a b : A} (f : A → B) → (a ≡ b) → (f a ≡ f b)
 cong f refl = refl
 
+cong₂ : ∀ {A B C : Set} {a c : A} {b d : B} (f : A → B → C) → (a ≡ c) → (b ≡ d) → (f a b ≡ f c d)
+cong₂ f refl refl = refl
+
 subst₁ : ∀ {A : Set} {a b : A} (F : A → Set) → (a ≡ b) → (F a) → (F b)
 subst₁ F refl x = x
 
