@@ -7,13 +7,15 @@ open import Agda.Builtin.Equality using (_≡_; refl)
 open import FFI.Data.Either using (Either; Left; Right; mapL; mapR; mapLR; swapLR; cond)
 open import FFI.Data.Maybe using (Maybe; just; nothing)
 open import Luau.Heap using (Heap; Object; function_is_end; defn; alloc; ok; next; lookup-not-allocated) renaming (_≡_⊕_↦_ to _≡ᴴ_⊕_↦_; _[_] to _[_]ᴴ; ∅ to ∅ᴴ)
-open import Luau.ResolveOverloads using (src; resolve)
+open import Luau.ResolveOverloads using (Resolved; src; resolve; resolveⁿ; resolveᶠ; resolveˢ; srcⁿ; target; yes; no)
 open import Luau.StrictMode using (Warningᴱ; Warningᴮ; Warningᴼ; Warningᴴ; Warningᵀ; ¬Warningᵀ; UnallocatedAddress; UnboundVariable; FunctionCallMismatch; NotFunctionCall; app₁; app₂; BinOpMismatch₁; BinOpMismatch₂; bin₁; bin₂; BlockMismatch; block₁; return; LocalVarMismatch; local₁; local₂; FunctionDefnMismatch; union; intersect; function; function₁; function₂; heap; expr; block; addr; param; result; UnsafeBlock; UnsafeLocal; UnsafeFunction; any; error; left; right; scalar; never)
 open import Luau.Substitution using (_[_/_]ᴮ; _[_/_]ᴱ; _[_/_]ᴮunless_; var_[_/_]ᴱwhenever_)
 open import Luau.Subtyping using (_<:_; _≮:_; witness; any; never; scalar; scalar-function; scalar-scalar; function-scalar; function-ok; left; right; _,_; Language; ¬Language)
 open import Luau.Syntax using (Expr; yes; var; val; var_∈_; _⟨_⟩∈_; _$_; addr; num; bool; str; binexp; nil; function_is_end; block_is_end; done; return; local_←_; _∙_; fun; arg; name; ==; ~=; +; -; *; /; <; >; <=; >=; ··)
 open import Luau.Type using (Type; NIL; NUMBER; STRING; BOOLEAN; nill; number; string; boolean; scalar; error; unknown; funktion; _⇒_; never; any; _∩_; _∪_; _≡ᵀ_; _≡ᴹᵀ_)
 open import Luau.TypeCheck using (_⊢ᴮ_∈_; _⊢ᴱ_∈_; _⊢ᴴᴮ_▷_∈_; _⊢ᴴᴱ_▷_∈_; nil; var; addr; app; function; block; done; return; local; orAny; srcBinOp; tgtBinOp)
+open import Luau.TypeNormalization using (normalize)
+open import Luau.TypeSaturation using (saturate)
 open import Luau.Var using (_≡ⱽ_)
 open import Luau.Addr using (_≡ᴬ_)
 open import Luau.VarCtxt using (VarCtxt; ∅; _⋒_; _↦_; _⊕_↦_; _⊝_; ⊕-lookup-miss; ⊕-swap; ⊕-over) renaming (_[_] to _[_]ⱽ)
@@ -24,10 +26,12 @@ open import Properties.Dec using (Dec; yes; no)
 open import Properties.Contradiction using (CONTRADICTION; ¬)
 open import Properties.Functions using (_∘_)
 open import Properties.DecSubtyping using (dec-subtyping)
-open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; scalar-<:-unknown; function-<:-unknown; any-≮:-scalar; scalar-≮:-never; any-≮:-never; <:-refl; <:-any; <:-impl-¬≮:; <:-never; <:-∪-lub; <:-∩-left; <:-∩-right)
+open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; scalar-<:-unknown; function-<:-unknown; any-≮:-scalar; scalar-≮:-never; any-≮:-never; <:-refl; <:-any; <:-impl-¬≮:; <:-never; <:-∪-lub; <:-∩-left; <:-∩-right; <:-∪-right)
 open import Properties.ResolveOverloads using (src-any-≮:; any-src-≮:; <:-resolve; resolve-<:-⇒; <:-resolve-⇒)
 open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; <:-trans-≮:; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; any-≮:-scalar; scalar-≮:-never; any-≮:-never; ≡-impl-<:; ≡-trans-<:; <:-trans-≡; ≮:-trans-<:; <:-trans)
 open import Properties.TypeCheck using (typeOfᴼ; typeOfᴹᴼ; typeOfⱽ; typeOfᴱ; typeOfᴮ; typeCheckᴱ; typeCheckᴮ; typeCheckᴼ; typeCheckᴴ)
+open import Properties.TypeNormalization using (normal; Normal; FunType; _⇒_; _∩_; _∪_; error; scalar; normalize-<:)
+open import Properties.TypeSaturation using (Overloads; Saturated; _⊆ᵒ_; _<:ᵒ_; normal-saturate; saturated; <:-saturate; saturate-<:; defn; here; left; right)
 open import Luau.OpSem using (_⟦_⟧_⟶_; _⊢_⟶*_⊣_; _⊢_⟶ᴮ_⊣_; _⊢_⟶ᴱ_⊣_; app₁; app₂; function; beta; return; block; done; local; subst; binOp₀; binOp₁; binOp₂; refl; step; +; -; *; /; <; >; ==; ~=; <=; >=; ··)
 open import Luau.RuntimeError using (BinOpError; RuntimeErrorᴱ; RuntimeErrorᴮ; FunctionMismatch; BinOpMismatch₁; BinOpMismatch₂; UnboundVariable; SEGV; app₁; app₂; bin₁; bin₂; block; local; return; +; -; *; /; <; >; <=; >=; ··)
 open import Luau.RuntimeType using (RuntimeType; valueType; num; str; bool; nil; function)
@@ -132,10 +136,72 @@ mapᴮᴱ+ f (ctxt W) = ctxt W
 -- conjecture : ∀ {F} → (F <: funktion) → Either (Warningᵀ F) (tgt F <: unknown)
 -- conjecture = {!!}
 
+data FoundSrcOverloadTo F G : Set where
+
+  found : ∀ S T →
+
+    Overloads F (S ⇒ T) →
+    srcⁿ G <: S →
+    S <: srcⁿ G →
+    --------------------
+    FoundSrcOverloadTo F G
+
+findSrcOverload : ∀ {F G} → (Gᶠ : FunType G) → (Fˢ : Saturated F) → (G ⊆ᵒ F) → FoundSrcOverloadTo F G
+findSrcOverload Gᶠ Fˢ = {!!}
+
+FoundSrcOverload : Type → Set
+FoundSrcOverload F = FoundSrcOverloadTo F F
+
+<:-src-saturateᶠ : ∀ {F} → (Fᶠ : FunType F) → srcⁿ F <: srcⁿ (saturate F)
+<:-src-saturateᶠ = {!!}
+
+Warningᵀ-overload : ∀ {F S T} → Overloads F (S ⇒ T) → Warningᵀ (S ⇒ T) → Warningᵀ F
+Warningᵀ-overload o W = {!!}
+
+Warningᵀ-saturateᶠ : ∀ {F} → (Fᶠ : FunType F) → Warningᵀ (saturate F) → Warningᵀ F
+Warningᵀ-saturateᶠ = {!!}
+
+Warningᵀ-normalize : ∀ F → Warningᵀ (normalize F) → Warningᵀ F
+Warningᵀ-normalize = {!!}
+
+Warningᵀ-resolvedˢ : ∀ {F} → (Fᶠ : FunType F) → (Fˢ : Saturated F) → (V : Type) → (FoundSrcOverload F) → (R : Resolved F V) → Warningᵀ(target R) → Either (V ≮: srcⁿ F) (Warningᵀ F)
+Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p q) R W  with dec-subtyping V S
+Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p q) R W | Left V≮:S = Left (≮:-trans-<: V≮:S p)
+Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p q) (yes Sʳ Tʳ oʳ V<:Sʳ r) W | Right V<:S = Right (Warningᵀ-overload oʳ (result W))
+Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p q) (no r) W | Right V<:S = CONTRADICTION (<:-impl-¬≮: V<:S (r o))
+
+Warningᵀ-resolveˢ : ∀ {F G} → (Gᶠ : FunType G) → (Fˢ : Saturated F) → (V : Type) → (G⊆F : G ⊆ᵒ F) → Warningᵀ(target (resolveˢ Gᶠ Fˢ V G⊆F)) → Either (V ≮: srcⁿ G) (Warningᵀ G)
+Warningᵀ-resolveˢ Gᶠ Fˢ V G⊆F W = {!!} -- Warningᵀ-resolvedˢ Gᶠ Fˢ V G⊆F (resolveˢ Gᶠ Fˢ V G⊆F) W
+
+Warningᵀ-resolveᶠ : ∀ {F} → (Fᶠ : FunType F) → ∀ V → Warningᵀ(resolveᶠ Fᶠ V) → Either (V ≮: srcⁿ F) (Warningᵀ F)
+Warningᵀ-resolveᶠ Fᶠ V W = mapLR (λ p → ≮:-trans-<: p (<:-src-saturateᶠ Fᶠ)) (Warningᵀ-saturateᶠ Fᶠ) (Warningᵀ-resolveˢ (normal-saturate Fᶠ) (saturated Fᶠ) V (λ o → o) W)
+
+Warningᵀ-resolveⁿ : ∀ {F} → (Fⁿ : Normal F) → ∀ V → Warningᵀ(resolveⁿ Fⁿ V) → Either (F ≮: funktion) (Either (V ≮: srcⁿ F) (Warningᵀ F))
+Warningᵀ-resolveⁿ (T ⇒ U) V W = Right (Warningᵀ-resolveᶠ (T ⇒ U) V W)
+Warningᵀ-resolveⁿ (T ∩ U) V W = Right (Warningᵀ-resolveᶠ (T ∩ U) V W)
+Warningᵀ-resolveⁿ (T ∪ error) V W = Right (Right (right error))
+Warningᵀ-resolveⁿ (T ∪ scalar S) V W = Left (<:-trans-≮: <:-∪-right (scalar-≮:-function S))
+
+Warningᵀ-resolve : ∀ F V → Warningᵀ(resolve F V) → Either (F ≮: funktion) (Either (V ≮: src F) (Warningᵀ F))
+Warningᵀ-resolve F V W with Warningᵀ-resolveⁿ (normal F) V W
+Warningᵀ-resolve F V W | Left p = Left (<:-trans-≮: (normalize-<: F) p)
+Warningᵀ-resolve F V W | Right (Left p) = Right (Left p)
+Warningᵀ-resolve F V W | Right (Right W′) = Right (Right (Warningᵀ-normalize F W′))
+
 Warningᵀ-impl-Warningᴱ : ∀ H Γ M → Warningᵀ (typeOfᴱ H Γ M) → (Warningᴱ+ H Γ M)
-Warningᵀ-impl-Warningᴮ : ∀ H Γ B → Warningᵀ (typeOfᴮ H Γ B) → (Warningᴮ+ H Γ B)
-Warningᵀ-impl-Warningᴱ = {!!}
-Warningᵀ-impl-Warningᴮ = {!!}
+Warningᵀ-impl-Warningᴱ H Γ (var x) W with remember (Γ [ x ]ⱽ)
+Warningᵀ-impl-Warningᴱ H Γ (var x) W | (nothing , p) = expr (UnboundVariable p)
+Warningᵀ-impl-Warningᴱ H Γ (var x) W | (just T , p) = ctxt (Unsafe x p (subst₁ Warningᵀ (cong orAny p) W  ))
+Warningᵀ-impl-Warningᴱ H Γ (val (addr a)) W with remember (H [ a ]ᴴ)
+Warningᵀ-impl-Warningᴱ H Γ (val (addr a)) W | (nothing , p) = expr (UnallocatedAddress p)
+Warningᵀ-impl-Warningᴱ H Γ (val (addr a)) W | (just (function f ⟨ var x ∈ T ⟩∈ U is B end) , p) = heap (addr a p (UnsafeFunction (subst₁ Warningᵀ (cong orAny (cong typeOfᴹᴼ p)) W)))
+Warningᵀ-impl-Warningᴱ H Γ (M $ N) W with Warningᵀ-resolve (typeOfᴱ H Γ M) (typeOfᴱ H Γ N) W
+Warningᵀ-impl-Warningᴱ H Γ (M $ N) W | Left p = expr (NotFunctionCall p)
+Warningᵀ-impl-Warningᴱ H Γ (M $ N) W | Right (Left p) = expr (FunctionCallMismatch p)
+Warningᵀ-impl-Warningᴱ H Γ (M $ N) W | Right (Right V) = mapᴱ+ app₁ (Warningᵀ-impl-Warningᴱ H Γ M V)
+Warningᵀ-impl-Warningᴱ H Γ (function f ⟨ var c ∈ T ⟩∈ U is B end) W = expr (UnsafeFunction W)
+Warningᵀ-impl-Warningᴱ H Γ (block var b ∈ T is B end) W = expr (UnsafeBlock W)
+Warningᵀ-impl-Warningᴱ H Γ (binexp M ·· N) ()
 
 -- typeOfᴱ<:unknown : ∀ H Γ M → Either (Warningᴱ+ H Γ M) (typeOfᴱ H Γ M <: unknown)
 -- typeOfᴱ<:unknown H Γ (var x) with remember (Γ [ x ]ⱽ)

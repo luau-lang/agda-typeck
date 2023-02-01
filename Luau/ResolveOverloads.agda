@@ -61,7 +61,7 @@ data ResolvedTo F G V : Set where
 Resolved : Type → Type → Set
 Resolved F V = ResolvedTo F F V
 
-target : ∀ {F V} → Resolved F V → Type
+target : ∀ {F G V} → ResolvedTo F G V → Type
 target (yes _ T _ _ _) = T
 target (no _) = any
 
