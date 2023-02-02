@@ -15,7 +15,7 @@ open import Luau.Syntax using (Expr; yes; var; val; var_∈_; _⟨_⟩∈_; _$_;
 open import Luau.Type using (Type; NIL; NUMBER; STRING; BOOLEAN; nill; number; string; boolean; scalar; error; unknown; funktion; _⇒_; never; any; _∩_; _∪_; _≡ᵀ_; _≡ᴹᵀ_; _≡ˢ_)
 open import Luau.TypeCheck using (_⊢ᴮ_∈_; _⊢ᴱ_∈_; _⊢ᴴᴮ_▷_∈_; _⊢ᴴᴱ_▷_∈_; nil; var; addr; app; function; block; done; return; local; orAny; srcBinOp; tgtBinOp)
 open import Luau.TypeNormalization using (normalize; _∩ⁿ_; _∪ⁿ_; _∪ⁿˢ_; _∩ⁿˢ_; _∪ᶠ_)
-open import Luau.TypeSaturation using (saturate)
+open import Luau.TypeSaturation using (saturate; ∩-saturate; ∪-saturate)
 open import Luau.Var using (_≡ⱽ_)
 open import Luau.Addr using (_≡ᴬ_)
 open import Luau.VarCtxt using (VarCtxt; ∅; _⋒_; _↦_; _⊕_↦_; _⊝_; ⊕-lookup-miss; ⊕-swap; ⊕-over) renaming (_[_] to _[_]ⱽ)
@@ -31,7 +31,7 @@ open import Properties.ResolveOverloads using (src-any-≮:; any-src-≮:; <:-re
 open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; <:-trans-≮:; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; any-≮:-scalar; scalar-≮:-never; any-≮:-never; ≡-impl-<:; ≡-trans-<:; <:-trans-≡; ≮:-trans-<:; <:-trans)
 open import Properties.TypeCheck using (typeOfᴼ; typeOfᴹᴼ; typeOfⱽ; typeOfᴱ; typeOfᴮ; typeCheckᴱ; typeCheckᴮ; typeCheckᴼ; typeCheckᴴ)
 open import Properties.TypeNormalization using (normal; Normal; FunType; ErrScalar; OptScalar; _⇒_; _∩_; _∪_; never; error; scalar; normalize-<:; normal-∩ⁿ; normal-∩ⁿˢ)
-open import Properties.TypeSaturation using (Overloads; Saturated; _⊆ᵒ_; _<:ᵒ_; normal-saturate; saturated; <:-saturate; saturate-<:; defn; here; left; right)
+open import Properties.TypeSaturation using (Overloads; Saturated; _⊆ᵒ_; _<:ᵒ_; normal-saturate; normal-∩-saturate; saturated; <:-saturate; saturate-<:; defn; here; left; right)
 open import Luau.OpSem using (_⟦_⟧_⟶_; _⊢_⟶*_⊣_; _⊢_⟶ᴮ_⊣_; _⊢_⟶ᴱ_⊣_; app₁; app₂; function; beta; return; block; done; local; subst; binOp₀; binOp₁; binOp₂; refl; step; +; -; *; /; <; >; ==; ~=; <=; >=; ··)
 open import Luau.RuntimeError using (BinOpError; RuntimeErrorᴱ; RuntimeErrorᴮ; FunctionMismatch; BinOpMismatch₁; BinOpMismatch₂; UnboundVariable; SEGV; app₁; app₂; bin₁; bin₂; block; local; return; +; -; *; /; <; >; <=; >=; ··)
 open import Luau.RuntimeType using (RuntimeType; valueType; num; str; bool; nil; function)
@@ -154,17 +154,24 @@ findSrcOverload (G₁ᶠ ∩ G₂ᶠ) (defn cap cup) G⊆F | found S₁ T₁ o�
 FoundSrcOverload : Type → Set
 FoundSrcOverload F = FoundSrcOverloadTo F F
 
--- <:-src-saturateᶠ : ∀ {F} → (Fᶠ : FunType F) → srcⁿ F <: srcⁿ (saturate F)
--- <:-src-saturateᶠ = {!!}
-
 <:-src : ∀ {F G} → (Fᶠ : FunType F) → (Gᶠ : FunType G) → F <: G → srcⁿ G <: srcⁿ F
 <:-src = {!!}
 
 Warningᵀ-overload : ∀ {F S T} → Overloads F (S ⇒ T) → Warningᵀ (S ⇒ T) → Warningᵀ F
-Warningᵀ-overload o W = {!!}
+Warningᵀ-overload here W = W
+Warningᵀ-overload (left o) W = {!!}
+Warningᵀ-overload (right o) W = {!!}
 
-Warningᵀ-saturateᶠ : ∀ {F} → (Fᶠ : FunType F) → Warningᵀ (saturate F) → Warningᵀ F
-Warningᵀ-saturateᶠ = {!!}
+Warningᵀ-∩-saturateᶠ : ∀ {F} → (FunType F) → Warningᵀ (∩-saturate F) → Warningᵀ F
+Warningᵀ-∩-saturateᶠ (S ⇒ T) W = W
+Warningᵀ-∩-saturateᶠ (F ∩ G) (intersect (intersect W₁ W₂) _) = intersect (Warningᵀ-∩-saturateᶠ F W₁) (Warningᵀ-∩-saturateᶠ G W₂)
+
+Warningᵀ-∪-saturateᶠ : ∀ {F} → (FunType F) → Warningᵀ (∪-saturate F) → Warningᵀ F
+Warningᵀ-∪-saturateᶠ (S ⇒ T) W = W
+Warningᵀ-∪-saturateᶠ (F ∩ G) (intersect (intersect W₁ W₂) _) = intersect (Warningᵀ-∪-saturateᶠ F W₁) (Warningᵀ-∪-saturateᶠ G W₂)
+
+Warningᵀ-saturateᶠ : ∀ {F} → (FunType F) → Warningᵀ (saturate F) → Warningᵀ F
+Warningᵀ-saturateᶠ F W = Warningᵀ-∩-saturateᶠ F (Warningᵀ-∪-saturateᶠ (normal-∩-saturate F) W)
 
 Warningᵀ-∪ᶠ : ∀ {F G} → (FunType F) → (FunType G) → Warningᵀ (F ∪ᶠ G) → Warningᵀ (F ∪ G)
 Warningᵀ-∪ᶠ (S ⇒ T) (U ⇒ V) (param (intersect W _)) = left (param W)
