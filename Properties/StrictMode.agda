@@ -7,14 +7,14 @@ open import Agda.Builtin.Equality using (_≡_; refl)
 open import FFI.Data.Either using (Either; Left; Right; mapL; mapR; mapLR; swapLR; cond)
 open import FFI.Data.Maybe using (Maybe; just; nothing)
 open import Luau.Heap using (Heap; Object; function_is_end; defn; alloc; ok; next; lookup-not-allocated) renaming (_≡_⊕_↦_ to _≡ᴴ_⊕_↦_; _[_] to _[_]ᴴ; ∅ to ∅ᴴ)
-open import Luau.ResolveOverloads using (Resolved; src; resolve; resolveⁿ; resolveᶠ; resolveˢ; srcⁿ; target; yes; no)
+open import Luau.ResolveOverloads using (Resolved; src; resolve; resolveⁿ; resolveᶠ; resolveˢ; resolveToˢ; srcⁿ; target; yes; no)
 open import Luau.StrictMode using (Warningᴱ; Warningᴮ; Warningᴼ; Warningᴴ; Warningᵀ; ¬Warningᵀ; UnallocatedAddress; UnboundVariable; FunctionCallMismatch; NotFunctionCall; app₁; app₂; BinOpMismatch₁; BinOpMismatch₂; bin₁; bin₂; BlockMismatch; block₁; return; LocalVarMismatch; local₁; local₂; FunctionDefnMismatch; union; intersect; function; function₁; function₂; heap; expr; block; addr; param; result; UnsafeBlock; UnsafeLocal; UnsafeFunction; any; error; left; right; scalar; never)
 open import Luau.Substitution using (_[_/_]ᴮ; _[_/_]ᴱ; _[_/_]ᴮunless_; var_[_/_]ᴱwhenever_)
 open import Luau.Subtyping using (_<:_; _≮:_; witness; any; never; scalar; scalar-function; scalar-scalar; function-scalar; function-ok; left; right; _,_; Language; ¬Language)
 open import Luau.Syntax using (Expr; yes; var; val; var_∈_; _⟨_⟩∈_; _$_; addr; num; bool; str; binexp; nil; function_is_end; block_is_end; done; return; local_←_; _∙_; fun; arg; name; ==; ~=; +; -; *; /; <; >; <=; >=; ··)
-open import Luau.Type using (Type; NIL; NUMBER; STRING; BOOLEAN; nill; number; string; boolean; scalar; error; unknown; funktion; _⇒_; never; any; _∩_; _∪_; _≡ᵀ_; _≡ᴹᵀ_)
+open import Luau.Type using (Type; NIL; NUMBER; STRING; BOOLEAN; nill; number; string; boolean; scalar; error; unknown; funktion; _⇒_; never; any; _∩_; _∪_; _≡ᵀ_; _≡ᴹᵀ_; _≡ˢ_)
 open import Luau.TypeCheck using (_⊢ᴮ_∈_; _⊢ᴱ_∈_; _⊢ᴴᴮ_▷_∈_; _⊢ᴴᴱ_▷_∈_; nil; var; addr; app; function; block; done; return; local; orAny; srcBinOp; tgtBinOp)
-open import Luau.TypeNormalization using (normalize)
+open import Luau.TypeNormalization using (normalize; _∩ⁿ_; _∪ⁿ_; _∪ⁿˢ_; _∩ⁿˢ_; _∪ᶠ_)
 open import Luau.TypeSaturation using (saturate)
 open import Luau.Var using (_≡ⱽ_)
 open import Luau.Addr using (_≡ᴬ_)
@@ -26,11 +26,11 @@ open import Properties.Dec using (Dec; yes; no)
 open import Properties.Contradiction using (CONTRADICTION; ¬)
 open import Properties.Functions using (_∘_)
 open import Properties.DecSubtyping using (dec-subtyping)
-open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; scalar-<:-unknown; function-<:-unknown; any-≮:-scalar; scalar-≮:-never; any-≮:-never; <:-refl; <:-any; <:-impl-¬≮:; <:-never; <:-∪-lub; <:-∩-left; <:-∩-right; <:-∪-right)
+open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; scalar-<:-unknown; function-<:-unknown; any-≮:-scalar; scalar-≮:-never; any-≮:-never; <:-refl; <:-any; <:-impl-¬≮:; <:-never; <:-∪-lub; <:-∩-left; <:-∩-right; <:-∪-left; <:-∪-right)
 open import Properties.ResolveOverloads using (src-any-≮:; any-src-≮:; <:-resolve; resolve-<:-⇒; <:-resolve-⇒)
 open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; <:-trans-≮:; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; any-≮:-scalar; scalar-≮:-never; any-≮:-never; ≡-impl-<:; ≡-trans-<:; <:-trans-≡; ≮:-trans-<:; <:-trans)
 open import Properties.TypeCheck using (typeOfᴼ; typeOfᴹᴼ; typeOfⱽ; typeOfᴱ; typeOfᴮ; typeCheckᴱ; typeCheckᴮ; typeCheckᴼ; typeCheckᴴ)
-open import Properties.TypeNormalization using (normal; Normal; FunType; _⇒_; _∩_; _∪_; error; scalar; normalize-<:)
+open import Properties.TypeNormalization using (normal; Normal; FunType; ErrScalar; OptScalar; _⇒_; _∩_; _∪_; never; error; scalar; normalize-<:; normal-∩ⁿ; normal-∩ⁿˢ)
 open import Properties.TypeSaturation using (Overloads; Saturated; _⊆ᵒ_; _<:ᵒ_; normal-saturate; saturated; <:-saturate; saturate-<:; defn; here; left; right)
 open import Luau.OpSem using (_⟦_⟧_⟶_; _⊢_⟶*_⊣_; _⊢_⟶ᴮ_⊣_; _⊢_⟶ᴱ_⊣_; app₁; app₂; function; beta; return; block; done; local; subst; binOp₀; binOp₁; binOp₂; refl; step; +; -; *; /; <; >; ==; ~=; <=; >=; ··)
 open import Luau.RuntimeError using (BinOpError; RuntimeErrorᴱ; RuntimeErrorᴮ; FunctionMismatch; BinOpMismatch₁; BinOpMismatch₂; UnboundVariable; SEGV; app₁; app₂; bin₁; bin₂; block; local; return; +; -; *; /; <; >; <=; >=; ··)
@@ -142,18 +142,23 @@ data FoundSrcOverloadTo F G : Set where
 
     Overloads F (S ⇒ T) →
     srcⁿ G <: S →
-    S <: srcⁿ G →
     --------------------
     FoundSrcOverloadTo F G
 
 findSrcOverload : ∀ {F G} → (Gᶠ : FunType G) → (Fˢ : Saturated F) → (G ⊆ᵒ F) → FoundSrcOverloadTo F G
-findSrcOverload Gᶠ Fˢ = {!!}
+findSrcOverload (S ⇒ T) Fˢ G⊆F = found S T (G⊆F here) <:-refl
+findSrcOverload (G₁ᶠ ∩ G₂ᶠ) Fˢ G⊆F with findSrcOverload G₁ᶠ Fˢ (G⊆F ∘ left) | findSrcOverload G₂ᶠ Fˢ (G⊆F ∘ right)
+findSrcOverload (G₁ᶠ ∩ G₂ᶠ) (defn cap cup) G⊆F | found S₁ T₁ o₁ p₁ | found S₂ T₂ o₂ p₂ with cup o₁ o₂
+findSrcOverload (G₁ᶠ ∩ G₂ᶠ) (defn cap cup) G⊆F | found S₁ T₁ o₁ p₁ | found S₂ T₂ o₂ p₂ | defn {S = S₀} {T = T₀} o₀ p₀ _ = found S₀ T₀ o₀ (<:-trans (<:-∪-lub (<:-trans p₁ <:-∪-left) (<:-trans p₂ <:-∪-right)) p₀)
 
 FoundSrcOverload : Type → Set
 FoundSrcOverload F = FoundSrcOverloadTo F F
 
-<:-src-saturateᶠ : ∀ {F} → (Fᶠ : FunType F) → srcⁿ F <: srcⁿ (saturate F)
-<:-src-saturateᶠ = {!!}
+-- <:-src-saturateᶠ : ∀ {F} → (Fᶠ : FunType F) → srcⁿ F <: srcⁿ (saturate F)
+-- <:-src-saturateᶠ = {!!}
+
+<:-src : ∀ {F G} → (Fᶠ : FunType F) → (Gᶠ : FunType G) → F <: G → srcⁿ G <: srcⁿ F
+<:-src = {!!}
 
 Warningᵀ-overload : ∀ {F S T} → Overloads F (S ⇒ T) → Warningᵀ (S ⇒ T) → Warningᵀ F
 Warningᵀ-overload o W = {!!}
@@ -161,20 +166,102 @@ Warningᵀ-overload o W = {!!}
 Warningᵀ-saturateᶠ : ∀ {F} → (Fᶠ : FunType F) → Warningᵀ (saturate F) → Warningᵀ F
 Warningᵀ-saturateᶠ = {!!}
 
-Warningᵀ-normalize : ∀ F → Warningᵀ (normalize F) → Warningᵀ F
-Warningᵀ-normalize = {!!}
+Warningᵀ-∪ᶠ : ∀ {F G} → (FunType F) → (FunType G) → Warningᵀ (F ∪ᶠ G) → Warningᵀ (F ∪ G)
+Warningᵀ-∪ᶠ (S ⇒ T) (U ⇒ V) (param (intersect W _)) = left (param W)
+Warningᵀ-∪ᶠ (S ⇒ T) (U ⇒ V) (result (left W)) = left (result W)
+Warningᵀ-∪ᶠ (S ⇒ T) (U ⇒ V) (result (right W)) = right (result W)
+Warningᵀ-∪ᶠ (S ⇒ T) (G ∩ H) (intersect W₁ W₂) with Warningᵀ-∪ᶠ (S ⇒ T) G W₁ | Warningᵀ-∪ᶠ (S ⇒ T) H W₂
+Warningᵀ-∪ᶠ (_ ⇒ _) (G ∩ H) (intersect W₁ W₂) | left W₃ | _ = left W₃
+Warningᵀ-∪ᶠ (_ ⇒ _) (G ∩ H) (intersect W₁ W₂) | _ | left W₄ = left W₄
+Warningᵀ-∪ᶠ (_ ⇒ _) (G ∩ H) (intersect W₁ W₂) | right W₃ | right W₄ = right (intersect W₃ W₄)
+Warningᵀ-∪ᶠ (E ∩ F) G (intersect W₁ W₂) with Warningᵀ-∪ᶠ E G W₁ | Warningᵀ-∪ᶠ F G W₂ 
+Warningᵀ-∪ᶠ (E ∩ F) G (intersect W₁ W₂) | left W₃ | left W₄ = left (intersect W₃ W₄)
+Warningᵀ-∪ᶠ (E ∩ F) G (intersect W₁ W₂) | right W₃ | _ = right W₃
+Warningᵀ-∪ᶠ (E ∩ F) G (intersect W₁ W₂) | _ | right W₄ = right W₄
+
+Warningᵀ-∪ⁿ : ∀ {T U} → (Normal T) → (Normal U) → Warningᵀ (T ∪ⁿ U) → Warningᵀ (T ∪ U)
+Warningᵀ-∪ⁿ (S ⇒ T) (U ⇒ V) W = Warningᵀ-∪ᶠ (S ⇒ T) (U ⇒ V) W
+Warningᵀ-∪ⁿ (S ∩ T) (U ⇒ V) W = Warningᵀ-∪ᶠ (S ∩ T) (U ⇒ V) W
+Warningᵀ-∪ⁿ (S ∪ T) (U ⇒ V) (left W) with Warningᵀ-∪ⁿ S (U ⇒ V) W
+Warningᵀ-∪ⁿ (S ∪ T) (U ⇒ V) (left W) | left W₁ = left (left W₁)
+Warningᵀ-∪ⁿ (S ∪ T) (U ⇒ V) (left W) | right W₂ = right W₂
+Warningᵀ-∪ⁿ (S ∪ T) (U ⇒ V) (right W) = left (right W)
+Warningᵀ-∪ⁿ never (U ⇒ V) W = right W
+Warningᵀ-∪ⁿ (S ⇒ T) (U ∩ V) W = Warningᵀ-∪ᶠ (S ⇒ T) (U ∩ V) W
+Warningᵀ-∪ⁿ (S ∩ T) (U ∩ V) W = Warningᵀ-∪ᶠ (S ∩ T) (U ∩ V) W
+Warningᵀ-∪ⁿ (S ∪ T) (U ∩ V) (left W) with Warningᵀ-∪ⁿ S (U ∩ V) W
+Warningᵀ-∪ⁿ (S ∪ T) (U ∩ V) (left W) | left W₁ = left (left W₁)
+Warningᵀ-∪ⁿ (S ∪ T) (U ∩ V) (left W) | right W₂ = right W₂
+Warningᵀ-∪ⁿ (S ∪ T) (U ∩ V) (right W) = left (right W)
+Warningᵀ-∪ⁿ never (U ∩ V) W = right W
+Warningᵀ-∪ⁿ T (U ∪ V) (left W) with Warningᵀ-∪ⁿ T U W
+Warningᵀ-∪ⁿ T (U ∪ V) (left W) | left W₁ = left W₁
+Warningᵀ-∪ⁿ T (U ∪ V) (left W) | right W₂ = right (left W₂)
+Warningᵀ-∪ⁿ T (U ∪ V) (right W) = right (right W)
+Warningᵀ-∪ⁿ T never W = left W
+
+Warningᵀ-∪ⁿˢ : ∀ {T U} → (Normal T) → (OptScalar U) → Warningᵀ (T ∪ⁿˢ U) → Warningᵀ (T ∪ U)
+Warningᵀ-∪ⁿˢ T never W = left W
+Warningᵀ-∪ⁿˢ T error W = right error
+Warningᵀ-∪ⁿˢ (S ⇒ T) (scalar U) W = W
+Warningᵀ-∪ⁿˢ (S ∩ T) (scalar U) W = W
+Warningᵀ-∪ⁿˢ never (scalar U) W = W
+Warningᵀ-∪ⁿˢ (S ∪ error) (scalar U) W = left (right error)
+Warningᵀ-∪ⁿˢ (S ∪ scalar T) (scalar U) W with T ≡ˢ U
+Warningᵀ-∪ⁿˢ (S ∪ scalar T) (scalar T) W | yes refl = left W
+Warningᵀ-∪ⁿˢ (S ∪ scalar T) (scalar U) (left W) | no p with Warningᵀ-∪ⁿˢ S (scalar U) W
+Warningᵀ-∪ⁿˢ (S ∪ scalar _) (scalar _) (left W) | no p | left W′ = left (left W′)
+
+Warningᵀ-∩ⁿˢ : ∀ {T U} → (Normal T) → (ErrScalar U) → Warningᵀ (T ∩ⁿˢ U) → Warningᵀ (T ∩ U)
+Warningᵀ-∩ⁿˢ (S ∪ error) error W = intersect (right W) W
+Warningᵀ-∩ⁿˢ (S ∪ scalar T) error W with Warningᵀ-∩ⁿˢ S error W
+Warningᵀ-∩ⁿˢ (S ∪ scalar T) error W | intersect W₁ W₂ = intersect (left W₁) W₂
+Warningᵀ-∩ⁿˢ (S ∪ error) (scalar U) W with Warningᵀ-∩ⁿˢ S (scalar U) W
+Warningᵀ-∩ⁿˢ (S ∪ error) (scalar U) W | intersect W₁ W₂ = intersect (left W₁) W₂
+Warningᵀ-∩ⁿˢ (S ∪ scalar T) (scalar U) W with T ≡ˢ U
+Warningᵀ-∩ⁿˢ (S ∪ scalar T) (scalar T) W | yes refl = intersect (right W) W
+Warningᵀ-∩ⁿˢ (S ∪ scalar T) (scalar U) W | no p with Warningᵀ-∩ⁿˢ S (scalar U) W
+Warningᵀ-∩ⁿˢ (S ∪ scalar T) (scalar U) W | no p | intersect W₁ W₂ = intersect (left W₁) W₂
+
+Warningᵀ-∩ⁿ : ∀ {T U} → (Normal T) → (Normal U) → Warningᵀ (T ∩ⁿ U) → Warningᵀ (T ∩ U)
+Warningᵀ-∩ⁿ (S ⇒ T) (U ⇒ V) W = W
+Warningᵀ-∩ⁿ (S ∩ T) (U ⇒ V) W = W
+Warningᵀ-∩ⁿ (S ∪ T) (U ⇒ V) W with Warningᵀ-∩ⁿ S (U ⇒ V) W 
+Warningᵀ-∩ⁿ (S ∪ T) (U ⇒ V) W | intersect W₁ W₂ = intersect (left W₁) W₂
+Warningᵀ-∩ⁿ (S ⇒ T) (U ∩ V) W = W
+Warningᵀ-∩ⁿ (S ∩ T) (U ∩ V) W = W
+Warningᵀ-∩ⁿ (S ∪ T) (U ∩ V) W with Warningᵀ-∩ⁿ S (U ∩ V) W
+Warningᵀ-∩ⁿ (S ∪ T) (U ∩ V) W | intersect W₁ W₂ = intersect (left W₁) W₂
+Warningᵀ-∩ⁿ T (U ∪ V) W with Warningᵀ-∪ⁿˢ (normal-∩ⁿ T U) (normal-∩ⁿˢ T V) W
+Warningᵀ-∩ⁿ T (U ∪ V) W | left W′ with Warningᵀ-∩ⁿ T U W′
+Warningᵀ-∩ⁿ T (U ∪ V) W | left W′ | intersect W₁ W₂ = intersect W₁ (left W₂)
+Warningᵀ-∩ⁿ T (U ∪ V) W | right W′ with Warningᵀ-∩ⁿˢ T V W′
+Warningᵀ-∩ⁿ T (U ∪ V) W | right W′ | intersect W₁ W₂ = intersect W₁ (right W₂)
+Warningᵀ-∩ⁿ T never ()
+
+Warningᵀ-normalize : ∀ T → Warningᵀ (normalize T) → Warningᵀ T
+Warningᵀ-normalize (scalar S) (left ())
+Warningᵀ-normalize (scalar S) (right ())
+Warningᵀ-normalize (S ⇒ T) W = W
+Warningᵀ-normalize any W = any
+Warningᵀ-normalize error W = error
+Warningᵀ-normalize (T ∪ U) W with Warningᵀ-∪ⁿ (normal T) (normal U) W
+Warningᵀ-normalize (T ∪ U) W | left W₁ = left (Warningᵀ-normalize T W₁)
+Warningᵀ-normalize (T ∪ U) W | right W₂ = right (Warningᵀ-normalize U W₂)
+Warningᵀ-normalize (T ∩ U) W with Warningᵀ-∩ⁿ (normal T) (normal U) W
+Warningᵀ-normalize (T ∩ U) W | intersect W₁ W₂ = intersect (Warningᵀ-normalize T W₁) (Warningᵀ-normalize U W₂)
 
 Warningᵀ-resolvedˢ : ∀ {F} → (Fᶠ : FunType F) → (Fˢ : Saturated F) → (V : Type) → (FoundSrcOverload F) → (R : Resolved F V) → Warningᵀ(target R) → Either (V ≮: srcⁿ F) (Warningᵀ F)
-Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p q) R W  with dec-subtyping V S
-Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p q) R W | Left V≮:S = Left (≮:-trans-<: V≮:S p)
-Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p q) (yes Sʳ Tʳ oʳ V<:Sʳ r) W | Right V<:S = Right (Warningᵀ-overload oʳ (result W))
-Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p q) (no r) W | Right V<:S = CONTRADICTION (<:-impl-¬≮: V<:S (r o))
+Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p) R W  with dec-subtyping V S
+Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p) R W | Left V≮:S = Left (≮:-trans-<: V≮:S p)
+Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p) (yes Sʳ Tʳ oʳ V<:Sʳ r) W | Right V<:S = Right (Warningᵀ-overload oʳ (result W))
+Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p) (no r) W | Right V<:S = CONTRADICTION (<:-impl-¬≮: V<:S (r o))
 
-Warningᵀ-resolveˢ : ∀ {F G} → (Gᶠ : FunType G) → (Fˢ : Saturated F) → (V : Type) → (G⊆F : G ⊆ᵒ F) → Warningᵀ(target (resolveˢ Gᶠ Fˢ V G⊆F)) → Either (V ≮: srcⁿ G) (Warningᵀ G)
-Warningᵀ-resolveˢ Gᶠ Fˢ V G⊆F W = {!!} -- Warningᵀ-resolvedˢ Gᶠ Fˢ V G⊆F (resolveˢ Gᶠ Fˢ V G⊆F) W
+Warningᵀ-resolveˢ : ∀ {F} → (Fᶠ : FunType F) → (Fˢ : Saturated F) → (V : Type) → Warningᵀ(resolveˢ Fᶠ Fˢ V) → Either (V ≮: srcⁿ F) (Warningᵀ F)
+Warningᵀ-resolveˢ Fᶠ Fˢ V W = Warningᵀ-resolvedˢ Fᶠ Fˢ V (findSrcOverload Fᶠ Fˢ (λ o → o)) (resolveToˢ Fᶠ Fˢ V (λ o → o)) W
 
 Warningᵀ-resolveᶠ : ∀ {F} → (Fᶠ : FunType F) → ∀ V → Warningᵀ(resolveᶠ Fᶠ V) → Either (V ≮: srcⁿ F) (Warningᵀ F)
-Warningᵀ-resolveᶠ Fᶠ V W = mapLR (λ p → ≮:-trans-<: p (<:-src-saturateᶠ Fᶠ)) (Warningᵀ-saturateᶠ Fᶠ) (Warningᵀ-resolveˢ (normal-saturate Fᶠ) (saturated Fᶠ) V (λ o → o) W)
+Warningᵀ-resolveᶠ Fᶠ V W = mapLR (λ p → ≮:-trans-<: p (<:-src (normal-saturate Fᶠ) Fᶠ (saturate-<: Fᶠ))) (Warningᵀ-saturateᶠ Fᶠ) (Warningᵀ-resolveˢ (normal-saturate Fᶠ) (saturated Fᶠ) V W)
 
 Warningᵀ-resolveⁿ : ∀ {F} → (Fⁿ : Normal F) → ∀ V → Warningᵀ(resolveⁿ Fⁿ V) → Either (F ≮: funktion) (Either (V ≮: srcⁿ F) (Warningᵀ F))
 Warningᵀ-resolveⁿ (T ⇒ U) V W = Right (Warningᵀ-resolveᶠ (T ⇒ U) V W)

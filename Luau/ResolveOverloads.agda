@@ -66,24 +66,27 @@ target (yes _ T _ _ _) = T
 target (no _) = any
 
 -- We can resolve any saturated function type
-resolveˢ : ∀ {F G} → FunType G → Saturated F → ∀ V → (G ⊆ᵒ F) → ResolvedTo F G V
-resolveˢ (S ⇒ T) (defn sat-∩ sat-∪) V G⊆F with dec-subtyping V S
-resolveˢ (S ⇒ T) (defn sat-∩ sat-∪) V G⊆F | Left V≮:S = no (λ { here → V≮:S })
-resolveˢ (S ⇒ T) (defn sat-∩ sat-∪) V G⊆F | Right V<:S = yes _ _ (G⊆F here) V<:S (λ { here _ → <:-refl })
-resolveˢ (Gᶠ ∩ Hᶠ) (defn sat-∩ sat-∪) V G⊆F with resolveˢ Gᶠ (defn sat-∩ sat-∪) V (G⊆F ∘ left) | resolveˢ Hᶠ (defn sat-∩ sat-∪) V (G⊆F ∘ right)
-resolveˢ (Gᶠ ∩ Hᶠ) (defn sat-∩ sat-∪) V G⊆F | yes S₁ T₁ o₁ V<:S₁ tgt₁ | yes S₂ T₂ o₂ V<:S₂ tgt₂ with sat-∩ o₁ o₂
-resolveˢ (Gᶠ ∩ Hᶠ) (defn sat-∩ sat-∪) V G⊆F | yes S₁ T₁ o₁ V<:S₁ tgt₁ | yes S₂ T₂ o₂ V<:S₂ tgt₂ | defn o p₁ p₂ =
+resolveToˢ : ∀ {F G} → FunType G → Saturated F → ∀ V → (G ⊆ᵒ F) → ResolvedTo F G V
+resolveToˢ (S ⇒ T) (defn sat-∩ sat-∪) V G⊆F with dec-subtyping V S
+resolveToˢ (S ⇒ T) (defn sat-∩ sat-∪) V G⊆F | Left V≮:S = no (λ { here → V≮:S })
+resolveToˢ (S ⇒ T) (defn sat-∩ sat-∪) V G⊆F | Right V<:S = yes _ _ (G⊆F here) V<:S (λ { here _ → <:-refl })
+resolveToˢ (Gᶠ ∩ Hᶠ) (defn sat-∩ sat-∪) V G⊆F with resolveToˢ Gᶠ (defn sat-∩ sat-∪) V (G⊆F ∘ left) | resolveToˢ Hᶠ (defn sat-∩ sat-∪) V (G⊆F ∘ right)
+resolveToˢ (Gᶠ ∩ Hᶠ) (defn sat-∩ sat-∪) V G⊆F | yes S₁ T₁ o₁ V<:S₁ tgt₁ | yes S₂ T₂ o₂ V<:S₂ tgt₂ with sat-∩ o₁ o₂
+resolveToˢ (Gᶠ ∩ Hᶠ) (defn sat-∩ sat-∪) V G⊆F | yes S₁ T₁ o₁ V<:S₁ tgt₁ | yes S₂ T₂ o₂ V<:S₂ tgt₂ | defn o p₁ p₂ =
   yes _ _ o (<:-trans (<:-∩-glb V<:S₁ V<:S₂) p₁) (λ { (left o) p → <:-trans p₂ (<:-trans <:-∩-left (tgt₁ o p)) ; (right o) p → <:-trans p₂ (<:-trans <:-∩-right (tgt₂ o p)) })
-resolveˢ (Gᶠ ∩ Hᶠ) (defn sat-∩ sat-∪) V G⊆F | yes S₁ T₁ o₁ V<:S₁ tgt₁ | no src₂ =
+resolveToˢ (Gᶠ ∩ Hᶠ) (defn sat-∩ sat-∪) V G⊆F | yes S₁ T₁ o₁ V<:S₁ tgt₁ | no src₂ =
   yes _ _ o₁ V<:S₁ (λ { (left o) p → tgt₁ o p ; (right o) p → CONTRADICTION (<:-impl-¬≮: p (src₂ o)) })
-resolveˢ (Gᶠ ∩ Hᶠ) (defn sat-∩ sat-∪) V G⊆F | no src₁ | yes S₂ T₂ o₂ V<:S₂ tgt₂ =
+resolveToˢ (Gᶠ ∩ Hᶠ) (defn sat-∩ sat-∪) V G⊆F | no src₁ | yes S₂ T₂ o₂ V<:S₂ tgt₂ =
   yes _ _ o₂ V<:S₂ (λ { (left o) p → CONTRADICTION (<:-impl-¬≮: p (src₁ o)) ; (right o) p → tgt₂ o p })
-resolveˢ (Gᶠ ∩ Hᶠ) (defn sat-∩ sat-∪) V G⊆F | no src₁ | no src₂ =
+resolveToˢ (Gᶠ ∩ Hᶠ) (defn sat-∩ sat-∪) V G⊆F | no src₁ | no src₂ =
   no (λ { (left o) → src₁ o ; (right o) → src₂ o })
+
+resolveˢ : ∀ {F} → FunType F → Saturated F → ∀ V → Type
+resolveˢ Fᶠ Fˢ V = target (resolveToˢ Fᶠ Fˢ V (λ o → o))
 
 -- Which means we can resolve any normalized type, by saturating it first
 resolveᶠ : ∀ {F} → FunType F → Type → Type
-resolveᶠ Fᶠ V = target (resolveˢ (normal-saturate Fᶠ) (saturated Fᶠ) V (λ o → o))
+resolveᶠ Fᶠ V = resolveˢ (normal-saturate Fᶠ) (saturated Fᶠ) V
 
 resolveⁿ : ∀ {F} → Normal F → Type → Type
 resolveⁿ (S ⇒ T) V = resolveᶠ (S ⇒ T) V

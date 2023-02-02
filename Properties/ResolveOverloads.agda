@@ -3,7 +3,7 @@
 module Properties.ResolveOverloads where
 
 open import FFI.Data.Either using (Left; Right)
-open import Luau.ResolveOverloads using (Resolved; src; srcⁿ; resolve; resolveⁿ; resolveᶠ; resolveˢ; target; yes; no)
+open import Luau.ResolveOverloads using (Resolved; src; srcⁿ; resolve; resolveⁿ; resolveᶠ; resolveToˢ; target; yes; no)
 open import Luau.Subtyping using (_<:_; _≮:_; Language; ¬Language; witness; scalar; any; never; function-ok; function-nok; function-scalar; function-warning; function-error; function-function; scalar-scalar; scalar-function; scalar-warning; scalar-error; _,_; left; right; _↦_; ⟨⟩; ⟨_⟩; warning; diverge; error; untyped; none; one)
 open import Luau.Type using (Type ; Scalar; _⇒_; _∩_; _∪_; scalar; any; never; error; unknown; NUMBER; BOOLEAN; NIL; STRING)
 open import Luau.TypeSaturation using (saturate)
@@ -124,8 +124,8 @@ resolveˢ-<:-⇒ Fᶠ Fˢ V⇒Uᶠ (yes Sʳ Tʳ oʳ V<:Sʳ tgtʳ) F<:V⇒U | def
 resolveˢ-<:-⇒ Fᶠ Fˢ V⇒Uᶠ (no tgtʳ) F<:V⇒U | defn o o₁ o₂ = CONTRADICTION (<:-impl-¬≮: o₁ (tgtʳ o))
 
 resolveⁿ-<:-⇒ : ∀ {F} → (Fⁿ : Normal F) → ∀ V U → (F <: (V ⇒ U)) → (resolveⁿ Fⁿ V <: U)
-resolveⁿ-<:-⇒ (S ⇒ T) V U F<:V⇒U = resolveˢ-<:-⇒ (normal-saturate (S ⇒ T)) (saturated (S ⇒ T)) (V ⇒ U) (resolveˢ (normal-saturate (S ⇒ T)) (saturated (S ⇒ T)) V (λ o → o)) F<:V⇒U
-resolveⁿ-<:-⇒ (Fⁿ ∩ Gⁿ) V U F<:V⇒U = resolveˢ-<:-⇒ (normal-saturate (Fⁿ ∩ Gⁿ)) (saturated (Fⁿ ∩ Gⁿ)) (V ⇒ U) (resolveˢ (normal-saturate (Fⁿ ∩ Gⁿ)) (saturated (Fⁿ ∩ Gⁿ)) V (λ o → o)) (<:-trans (saturate-<: (Fⁿ ∩ Gⁿ)) F<:V⇒U)
+resolveⁿ-<:-⇒ (S ⇒ T) V U F<:V⇒U = resolveˢ-<:-⇒ (normal-saturate (S ⇒ T)) (saturated (S ⇒ T)) (V ⇒ U) (resolveToˢ (normal-saturate (S ⇒ T)) (saturated (S ⇒ T)) V (λ o → o)) F<:V⇒U
+resolveⁿ-<:-⇒ (Fⁿ ∩ Gⁿ) V U F<:V⇒U = resolveˢ-<:-⇒ (normal-saturate (Fⁿ ∩ Gⁿ)) (saturated (Fⁿ ∩ Gⁿ)) (V ⇒ U) (resolveToˢ (normal-saturate (Fⁿ ∩ Gⁿ)) (saturated (Fⁿ ∩ Gⁿ)) V (λ o → o)) (<:-trans (saturate-<: (Fⁿ ∩ Gⁿ)) F<:V⇒U)
 resolveⁿ-<:-⇒ (Sⁿ ∪ scalar s) V U F<:V⇒U = CONTRADICTION (<:-impl-¬≮: F<:V⇒U (<:-trans-≮: <:-∪-right (scalar-≮:-function s)))
 resolveⁿ-<:-⇒ (Sⁿ ∪ error) V U F<:V⇒U = CONTRADICTION (<:-impl-¬≮: F<:V⇒U (<:-trans-≮: <:-∪-right (witness error function-error)))
 resolveⁿ-<:-⇒ never V U F<:V⇒U = <:-never
@@ -143,7 +143,7 @@ resolve-≮:-⇒ {F} {V} {U} FV≮:U | Right F<:V⇒U = CONTRADICTION (<:-impl-�
 <:-resolveˢ-⇒ (no _) V<:S = <:-any
 
 <:-resolveⁿ-⇒ : ∀ S T V → (V <: S) → T <: resolveⁿ (S ⇒ T) V
-<:-resolveⁿ-⇒ S T V V<:S = <:-resolveˢ-⇒ (resolveˢ (S ⇒ T) (saturated (S ⇒ T)) V (λ o → o)) V<:S 
+<:-resolveⁿ-⇒ S T V V<:S = <:-resolveˢ-⇒ (resolveToˢ (S ⇒ T) (saturated (S ⇒ T)) V (λ o → o)) V<:S 
 
 <:-resolve-⇒ : ∀ {S T V} → (V <: S) → T <: resolve (S ⇒ T) V
 <:-resolve-⇒ {S} {T} {V} V<:S = <:-resolveⁿ-⇒ S T V V<:S
@@ -157,8 +157,8 @@ resolve-≮:-⇒ {F} {V} {U} FV≮:U | Right F<:V⇒U = CONTRADICTION (<:-impl-�
 
 <:-resolveᶠ : ∀ {F G} → (Fᶠ : FunType F) → (Gᶠ : FunType G) → ∀ V W → (F <: G) → (V <: W) → resolveᶠ Fᶠ V <: resolveᶠ Gᶠ W
 <:-resolveᶠ Fᶠ Gᶠ V W F<:G V<:W = <:-resolveˢ
-  (resolveˢ (normal-saturate Fᶠ) (saturated Fᶠ) V (λ o → o))
-  (resolveˢ (normal-saturate Gᶠ) (saturated Gᶠ) W (λ o → o))
+  (resolveToˢ (normal-saturate Fᶠ) (saturated Fᶠ) V (λ o → o))
+  (resolveToˢ (normal-saturate Gᶠ) (saturated Gᶠ) W (λ o → o))
   (<:-impl-<:ᵒ (normal-saturate Fᶠ) (saturated Fᶠ) (normal-saturate Gᶠ) (<:-trans (saturate-<: Fᶠ) (<:-trans F<:G (<:-saturate Gᶠ))))
   V<:W
 
