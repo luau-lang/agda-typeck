@@ -8,7 +8,7 @@ open import FFI.Data.Either using (Either; Left; Right; mapL; mapR; mapLR; swapL
 open import FFI.Data.Maybe using (Maybe; just; nothing)
 open import Luau.Heap using (Heap; Object; function_is_end; defn; alloc; ok; next; lookup-not-allocated) renaming (_≡_⊕_↦_ to _≡ᴴ_⊕_↦_; _[_] to _[_]ᴴ; ∅ to ∅ᴴ)
 open import Luau.ResolveOverloads using (Resolved; src; resolve; resolveⁿ; resolveᶠ; resolveˢ; resolveToˢ; srcⁿ; target; yes; no)
-open import Luau.StrictMode using (Warningᴱ; Warningᴮ; Warningᴼ; Warningᴴ; Warningᵀ; ¬Warningᵀ; UnallocatedAddress; UnboundVariable; FunctionCallMismatch; NotFunctionCall; app₁; app₂; BinOpMismatch₁; BinOpMismatch₂; bin₁; bin₂; BlockMismatch; block₁; return; LocalVarMismatch; local₁; local₂; FunctionDefnMismatch; union; intersect; function; function₁; function₂; heap; expr; block; addr; param; result; UnsafeBlock; UnsafeLocal; UnsafeFunction; any; error; left; right; scalar; never)
+open import Luau.StrictMode using (Warningᴱ; Warningᴮ; Warningᴼ; Warningᴴ; Unsafe; Safe; UnallocatedAddress; UnboundVariable; FunctionCallMismatch; NotFunctionCall; app₁; app₂; BinOpMismatch₁; BinOpMismatch₂; bin₁; bin₂; BlockMismatch; block₁; return; LocalVarMismatch; local₁; local₂; FunctionDefnMismatch; function; function₁; function₂; heap; expr; block; addr; param; result; UnsafeBlock; UnsafeLocal; UnsafeFunction; any; error; scalar; never; ∪-left; ∪-right; ∩-left; ∩-right; _∩_; _∪_)
 open import Luau.Substitution using (_[_/_]ᴮ; _[_/_]ᴱ; _[_/_]ᴮunless_; var_[_/_]ᴱwhenever_)
 open import Luau.Subtyping using (_<:_; _≮:_; witness; any; never; scalar; scalar-function; scalar-scalar; function-scalar; function-ok; left; right; _,_; Language; ¬Language)
 open import Luau.Syntax using (Expr; yes; var; val; var_∈_; _⟨_⟩∈_; _$_; addr; num; bool; str; binexp; nil; function_is_end; block_is_end; done; return; local_←_; _∙_; fun; arg; name; ==; ~=; +; -; *; /; <; >; <=; >=; ··)
@@ -69,32 +69,31 @@ lookup-⊑-nothing {H} a (snoc defn) p with a ≡ᴬ next H
 lookup-⊑-nothing {H} a (snoc defn) p | yes refl = refl
 lookup-⊑-nothing {H} a (snoc o) p | no q = trans (lookup-not-allocated o q) p
 
-dec-Warningᵀ : ∀ T → Either (Warningᵀ T) (¬Warningᵀ T)
-dec-Warningᵀ (scalar S) = Right (scalar S)
-dec-Warningᵀ (S ⇒ T) = cond (Left ∘ param) (λ ¬Wˢ → mapLR result (function ¬Wˢ) (dec-Warningᵀ T)) (dec-Warningᵀ S)
-dec-Warningᵀ never = Right never
-dec-Warningᵀ any = Left any
-dec-Warningᵀ error = Left error
-dec-Warningᵀ (T ∪ U) = cond (Left ∘ left) (λ ¬Wᵀ → mapLR right (union ¬Wᵀ) (dec-Warningᵀ U)) (dec-Warningᵀ T)
-dec-Warningᵀ (T ∩ U) = cond (λ Wᵀ → mapLR (intersect Wᵀ) right (dec-Warningᵀ U)) (Right ∘ left) (dec-Warningᵀ T)
+dec-Unsafe : ∀ T → Either (Unsafe T) (Safe T)
+dec-Unsafe (scalar S) = Right (scalar S)
+dec-Unsafe (S ⇒ T) = cond (Left ∘ param) (λ ¬Wˢ → mapLR result (function ¬Wˢ) (dec-Unsafe T)) (dec-Unsafe S)
+dec-Unsafe never = Right never
+dec-Unsafe any = Left any
+dec-Unsafe error = Left error
+dec-Unsafe (T ∪ U) = cond (Left ∘ ∪-left) (λ ¬Wᵀ → mapLR ∪-right (λ ¬Wᵁ → ¬Wᵀ ∪ ¬Wᵁ) (dec-Unsafe U)) (dec-Unsafe T)
+dec-Unsafe (T ∩ U) = cond (Left ∘ ∩-left) (λ ¬Wᵀ → mapLR ∩-right (λ ¬Wᵁ → ¬Wᵀ ∩ ¬Wᵁ) (dec-Unsafe U)) (dec-Unsafe T)
 
--- warning-comp : ∀ {T} → ¬Warningᵀ T → ¬(Warningᵀ T)
+-- warning-comp : ∀ {T} → Safe T → ¬(Unsafe T)
 -- warning-comp V W = {!!}
 
-<:-unknown : ∀ {T} → ¬Warningᵀ T → (T <: unknown)
+<:-unknown : ∀ {T} → Safe T → (T <: unknown)
 <:-unknown never = <:-never
-<:-unknown (union ¬W ¬W′) = <:-∪-lub (<:-unknown ¬W) (<:-unknown ¬W′)
-<:-unknown (left ¬W) = <:-trans <:-∩-left (<:-unknown ¬W)
-<:-unknown (right ¬W) = <:-trans <:-∩-right (<:-unknown ¬W)
+<:-unknown (¬W ∪ ¬W′) = <:-∪-lub (<:-unknown ¬W) (<:-unknown ¬W′)
+<:-unknown (¬W ∩ ¬W′) = <:-trans <:-∩-left (<:-unknown ¬W)
 <:-unknown (function ¬W ¬W′) = function-<:-unknown
 <:-unknown (scalar S) = scalar-<:-unknown
 
 data Warningⱽ (Γ : VarCtxt) : Set where
 
-  Unsafe : ∀ x {T} →
+  UnsafeVar : ∀ x {T} →
 
     Γ [ x ]ⱽ ≡ just T →
-    Warningᵀ T →
+    Unsafe T →
     -------------------
     Warningⱽ Γ
     
@@ -130,12 +129,6 @@ mapᴮᴱ+ f (block W) = expr (f W)
 mapᴮᴱ+ f (heap W) = heap W
 mapᴮᴱ+ f (ctxt W) = ctxt W
 
--- tgt : Type → Type
--- tgt T = resolve T (src T)
-
--- conjecture : ∀ {F} → (F <: funktion) → Either (Warningᵀ F) (tgt F <: unknown)
--- conjecture = {!!}
-
 data FoundSrcOverloadTo F G : Set where
 
   found : ∀ S T →
@@ -157,145 +150,149 @@ FoundSrcOverload F = FoundSrcOverloadTo F F
 <:-src : ∀ {F G} → (Fᶠ : FunType F) → (Gᶠ : FunType G) → F <: G → srcⁿ G <: srcⁿ F
 <:-src = {!!}
 
-Warningᵀ-overload : ∀ {F S T} → Overloads F (S ⇒ T) → Warningᵀ (S ⇒ T) → Warningᵀ F
-Warningᵀ-overload here W = W
-Warningᵀ-overload (left o) W = {!!}
-Warningᵀ-overload (right o) W = {!!}
+Unsafe-overload : ∀ {F S T} → Overloads F (S ⇒ T) → Unsafe (S ⇒ T) → Unsafe F
+Unsafe-overload here W = W
+Unsafe-overload (left o) W = ∩-left (Unsafe-overload o W)
+Unsafe-overload (right o) W = ∩-right (Unsafe-overload o W)
 
-Warningᵀ-∩-saturateᶠ : ∀ {F} → (FunType F) → Warningᵀ (∩-saturate F) → Warningᵀ F
-Warningᵀ-∩-saturateᶠ (S ⇒ T) W = W
-Warningᵀ-∩-saturateᶠ (F ∩ G) (intersect (intersect W₁ W₂) _) = intersect (Warningᵀ-∩-saturateᶠ F W₁) (Warningᵀ-∩-saturateᶠ G W₂)
+Unsafe-∩-saturateᶠ : ∀ {F} → (FunType F) → Unsafe (∩-saturate F) → Unsafe F
+Unsafe-∩-saturateᶠ (S ⇒ T) W = W
+Unsafe-∩-saturateᶠ (F ∩ G) (∩-left (∩-left W)) = ∩-left (Unsafe-∩-saturateᶠ F W)
+Unsafe-∩-saturateᶠ (F ∩ G) (∩-left (∩-right W)) = ∩-right (Unsafe-∩-saturateᶠ G W)
+Unsafe-∩-saturateᶠ (F ∩ G) (∩-right W) = {!W!}
 
-Warningᵀ-∪-saturateᶠ : ∀ {F} → (FunType F) → Warningᵀ (∪-saturate F) → Warningᵀ F
-Warningᵀ-∪-saturateᶠ (S ⇒ T) W = W
-Warningᵀ-∪-saturateᶠ (F ∩ G) (intersect (intersect W₁ W₂) _) = intersect (Warningᵀ-∪-saturateᶠ F W₁) (Warningᵀ-∪-saturateᶠ G W₂)
+Unsafe-∪-saturateᶠ : ∀ {F} → (FunType F) → Unsafe (∪-saturate F) → Unsafe F
+Unsafe-∪-saturateᶠ (S ⇒ T) W = W
+Unsafe-∪-saturateᶠ (F ∩ G) (∩-left (∩-left W)) = ∩-left (Unsafe-∪-saturateᶠ F W)
+Unsafe-∪-saturateᶠ (F ∩ G) (∩-left (∩-right W)) = ∩-right (Unsafe-∪-saturateᶠ G W)
+Unsafe-∪-saturateᶠ (F ∩ G) (∩-right W) = {!!}
 
-Warningᵀ-saturateᶠ : ∀ {F} → (FunType F) → Warningᵀ (saturate F) → Warningᵀ F
-Warningᵀ-saturateᶠ F W = Warningᵀ-∩-saturateᶠ F (Warningᵀ-∪-saturateᶠ (normal-∩-saturate F) W)
+Unsafe-saturateᶠ : ∀ {F} → (FunType F) → Unsafe (saturate F) → Unsafe F
+Unsafe-saturateᶠ F W = Unsafe-∩-saturateᶠ F (Unsafe-∪-saturateᶠ (normal-∩-saturate F) W)
 
-Warningᵀ-∪ᶠ : ∀ {F G} → (FunType F) → (FunType G) → Warningᵀ (F ∪ᶠ G) → Warningᵀ (F ∪ G)
-Warningᵀ-∪ᶠ (S ⇒ T) (U ⇒ V) (param (intersect W _)) = left (param W)
-Warningᵀ-∪ᶠ (S ⇒ T) (U ⇒ V) (result (left W)) = left (result W)
-Warningᵀ-∪ᶠ (S ⇒ T) (U ⇒ V) (result (right W)) = right (result W)
-Warningᵀ-∪ᶠ (S ⇒ T) (G ∩ H) (intersect W₁ W₂) with Warningᵀ-∪ᶠ (S ⇒ T) G W₁ | Warningᵀ-∪ᶠ (S ⇒ T) H W₂
-Warningᵀ-∪ᶠ (_ ⇒ _) (G ∩ H) (intersect W₁ W₂) | left W₃ | _ = left W₃
-Warningᵀ-∪ᶠ (_ ⇒ _) (G ∩ H) (intersect W₁ W₂) | _ | left W₄ = left W₄
-Warningᵀ-∪ᶠ (_ ⇒ _) (G ∩ H) (intersect W₁ W₂) | right W₃ | right W₄ = right (intersect W₃ W₄)
-Warningᵀ-∪ᶠ (E ∩ F) G (intersect W₁ W₂) with Warningᵀ-∪ᶠ E G W₁ | Warningᵀ-∪ᶠ F G W₂ 
-Warningᵀ-∪ᶠ (E ∩ F) G (intersect W₁ W₂) | left W₃ | left W₄ = left (intersect W₃ W₄)
-Warningᵀ-∪ᶠ (E ∩ F) G (intersect W₁ W₂) | right W₃ | _ = right W₃
-Warningᵀ-∪ᶠ (E ∩ F) G (intersect W₁ W₂) | _ | right W₄ = right W₄
+Unsafe-∪ᶠ : ∀ {F G} → (FunType F) → (FunType G) → Unsafe (F ∪ᶠ G) → Unsafe (F ∪ G)
+-- Unsafe-∪ᶠ (S ⇒ T) (U ⇒ V) (param (intersect W _)) = left (param W)
+Unsafe-∪ᶠ (S ⇒ T) (U ⇒ V) (result (∪-left W)) = ∪-left (result W)
+Unsafe-∪ᶠ (S ⇒ T) (U ⇒ V) (result (∪-right W)) = ∪-right (result W)
+-- Unsafe-∪ᶠ (S ⇒ T) (G ∩ H) (intersect W₁ W₂) with Unsafe-∪ᶠ (S ⇒ T) G W₁ | Unsafe-∪ᶠ (S ⇒ T) H W₂
+-- Unsafe-∪ᶠ (_ ⇒ _) (G ∩ H) (intersect W₁ W₂) | left W₃ | _ = left W₃
+-- Unsafe-∪ᶠ (_ ⇒ _) (G ∩ H) (intersect W₁ W₂) | _ | left W₄ = left W₄
+-- Unsafe-∪ᶠ (_ ⇒ _) (G ∩ H) (intersect W₁ W₂) | right W₃ | right W₄ = right (intersect W₃ W₄)
+-- Unsafe-∪ᶠ (E ∩ F) G (intersect W₁ W₂) with Unsafe-∪ᶠ E G W₁ | Unsafe-∪ᶠ F G W₂ 
+-- Unsafe-∪ᶠ (E ∩ F) G (intersect W₁ W₂) | left W₃ | left W₄ = left (intersect W₃ W₄)
+-- Unsafe-∪ᶠ (E ∩ F) G (intersect W₁ W₂) | right W₃ | _ = right W₃
+-- Unsafe-∪ᶠ (E ∩ F) G (intersect W₁ W₂) | _ | right W₄ = right W₄
 
-Warningᵀ-∪ⁿ : ∀ {T U} → (Normal T) → (Normal U) → Warningᵀ (T ∪ⁿ U) → Warningᵀ (T ∪ U)
-Warningᵀ-∪ⁿ (S ⇒ T) (U ⇒ V) W = Warningᵀ-∪ᶠ (S ⇒ T) (U ⇒ V) W
-Warningᵀ-∪ⁿ (S ∩ T) (U ⇒ V) W = Warningᵀ-∪ᶠ (S ∩ T) (U ⇒ V) W
-Warningᵀ-∪ⁿ (S ∪ T) (U ⇒ V) (left W) with Warningᵀ-∪ⁿ S (U ⇒ V) W
-Warningᵀ-∪ⁿ (S ∪ T) (U ⇒ V) (left W) | left W₁ = left (left W₁)
-Warningᵀ-∪ⁿ (S ∪ T) (U ⇒ V) (left W) | right W₂ = right W₂
-Warningᵀ-∪ⁿ (S ∪ T) (U ⇒ V) (right W) = left (right W)
-Warningᵀ-∪ⁿ never (U ⇒ V) W = right W
-Warningᵀ-∪ⁿ (S ⇒ T) (U ∩ V) W = Warningᵀ-∪ᶠ (S ⇒ T) (U ∩ V) W
-Warningᵀ-∪ⁿ (S ∩ T) (U ∩ V) W = Warningᵀ-∪ᶠ (S ∩ T) (U ∩ V) W
-Warningᵀ-∪ⁿ (S ∪ T) (U ∩ V) (left W) with Warningᵀ-∪ⁿ S (U ∩ V) W
-Warningᵀ-∪ⁿ (S ∪ T) (U ∩ V) (left W) | left W₁ = left (left W₁)
-Warningᵀ-∪ⁿ (S ∪ T) (U ∩ V) (left W) | right W₂ = right W₂
-Warningᵀ-∪ⁿ (S ∪ T) (U ∩ V) (right W) = left (right W)
-Warningᵀ-∪ⁿ never (U ∩ V) W = right W
-Warningᵀ-∪ⁿ T (U ∪ V) (left W) with Warningᵀ-∪ⁿ T U W
-Warningᵀ-∪ⁿ T (U ∪ V) (left W) | left W₁ = left W₁
-Warningᵀ-∪ⁿ T (U ∪ V) (left W) | right W₂ = right (left W₂)
-Warningᵀ-∪ⁿ T (U ∪ V) (right W) = right (right W)
-Warningᵀ-∪ⁿ T never W = left W
+Unsafe-∪ⁿ : ∀ {T U} → (Normal T) → (Normal U) → Unsafe (T ∪ⁿ U) → Unsafe (T ∪ U)
+Unsafe-∪ⁿ (S ⇒ T) (U ⇒ V) W = Unsafe-∪ᶠ (S ⇒ T) (U ⇒ V) W
+Unsafe-∪ⁿ (S ∩ T) (U ⇒ V) W = Unsafe-∪ᶠ (S ∩ T) (U ⇒ V) W
+Unsafe-∪ⁿ (S ∪ T) (U ⇒ V) (∪-left W) with Unsafe-∪ⁿ S (U ⇒ V) W
+Unsafe-∪ⁿ (S ∪ T) (U ⇒ V) (∪-left W) | ∪-left W₁ = ∪-left (∪-left W₁)
+Unsafe-∪ⁿ (S ∪ T) (U ⇒ V) (∪-left W) | ∪-right W₂ = ∪-right W₂
+Unsafe-∪ⁿ (S ∪ T) (U ⇒ V) (∪-right W) = ∪-left (∪-right W)
+Unsafe-∪ⁿ never (U ⇒ V) W = ∪-right W
+Unsafe-∪ⁿ (S ⇒ T) (U ∩ V) W = Unsafe-∪ᶠ (S ⇒ T) (U ∩ V) W
+Unsafe-∪ⁿ (S ∩ T) (U ∩ V) W = Unsafe-∪ᶠ (S ∩ T) (U ∩ V) W
+Unsafe-∪ⁿ (S ∪ T) (U ∩ V) (∪-left W) with Unsafe-∪ⁿ S (U ∩ V) W
+Unsafe-∪ⁿ (S ∪ T) (U ∩ V) (∪-left W) | ∪-left W₁ = ∪-left (∪-left W₁)
+Unsafe-∪ⁿ (S ∪ T) (U ∩ V) (∪-left W) | ∪-right W₂ = ∪-right W₂
+Unsafe-∪ⁿ (S ∪ T) (U ∩ V) (∪-right W) = ∪-left (∪-right W)
+Unsafe-∪ⁿ never (U ∩ V) W = ∪-right W
+Unsafe-∪ⁿ T (U ∪ V) (∪-left W) with Unsafe-∪ⁿ T U W
+Unsafe-∪ⁿ T (U ∪ V) (∪-left W) | ∪-left W₁ = ∪-left W₁
+Unsafe-∪ⁿ T (U ∪ V) (∪-left W) | ∪-right W₂ = ∪-right (∪-left W₂)
+Unsafe-∪ⁿ T (U ∪ V) (∪-right W) = ∪-right (∪-right W)
+Unsafe-∪ⁿ T never W = ∪-left W
 
-Warningᵀ-∪ⁿˢ : ∀ {T U} → (Normal T) → (OptScalar U) → Warningᵀ (T ∪ⁿˢ U) → Warningᵀ (T ∪ U)
-Warningᵀ-∪ⁿˢ T never W = left W
-Warningᵀ-∪ⁿˢ T error W = right error
-Warningᵀ-∪ⁿˢ (S ⇒ T) (scalar U) W = W
-Warningᵀ-∪ⁿˢ (S ∩ T) (scalar U) W = W
-Warningᵀ-∪ⁿˢ never (scalar U) W = W
-Warningᵀ-∪ⁿˢ (S ∪ error) (scalar U) W = left (right error)
-Warningᵀ-∪ⁿˢ (S ∪ scalar T) (scalar U) W with T ≡ˢ U
-Warningᵀ-∪ⁿˢ (S ∪ scalar T) (scalar T) W | yes refl = left W
-Warningᵀ-∪ⁿˢ (S ∪ scalar T) (scalar U) (left W) | no p with Warningᵀ-∪ⁿˢ S (scalar U) W
-Warningᵀ-∪ⁿˢ (S ∪ scalar _) (scalar _) (left W) | no p | left W′ = left (left W′)
+Unsafe-∪ⁿˢ : ∀ {T U} → (Normal T) → (OptScalar U) → Unsafe (T ∪ⁿˢ U) → Unsafe (T ∪ U)
+Unsafe-∪ⁿˢ T never W = ∪-left W
+Unsafe-∪ⁿˢ T error W = ∪-right error
+Unsafe-∪ⁿˢ (S ⇒ T) (scalar U) W = W
+Unsafe-∪ⁿˢ (S ∩ T) (scalar U) W = W
+Unsafe-∪ⁿˢ never (scalar U) W = W
+Unsafe-∪ⁿˢ (S ∪ error) (scalar U) W = ∪-left (∪-right error)
+Unsafe-∪ⁿˢ (S ∪ scalar T) (scalar U) W with T ≡ˢ U
+Unsafe-∪ⁿˢ (S ∪ scalar T) (scalar T) W | yes refl = ∪-left W
+Unsafe-∪ⁿˢ (S ∪ scalar T) (scalar U) (∪-left W) | no p with Unsafe-∪ⁿˢ S (scalar U) W
+Unsafe-∪ⁿˢ (S ∪ scalar _) (scalar _) (∪-left W) | no p | ∪-left W′ = ∪-left (∪-left W′)
 
-Warningᵀ-∩ⁿˢ : ∀ {T U} → (Normal T) → (ErrScalar U) → Warningᵀ (T ∩ⁿˢ U) → Warningᵀ (T ∩ U)
-Warningᵀ-∩ⁿˢ (S ∪ error) error W = intersect (right W) W
-Warningᵀ-∩ⁿˢ (S ∪ scalar T) error W with Warningᵀ-∩ⁿˢ S error W
-Warningᵀ-∩ⁿˢ (S ∪ scalar T) error W | intersect W₁ W₂ = intersect (left W₁) W₂
-Warningᵀ-∩ⁿˢ (S ∪ error) (scalar U) W with Warningᵀ-∩ⁿˢ S (scalar U) W
-Warningᵀ-∩ⁿˢ (S ∪ error) (scalar U) W | intersect W₁ W₂ = intersect (left W₁) W₂
-Warningᵀ-∩ⁿˢ (S ∪ scalar T) (scalar U) W with T ≡ˢ U
-Warningᵀ-∩ⁿˢ (S ∪ scalar T) (scalar T) W | yes refl = intersect (right W) W
-Warningᵀ-∩ⁿˢ (S ∪ scalar T) (scalar U) W | no p with Warningᵀ-∩ⁿˢ S (scalar U) W
-Warningᵀ-∩ⁿˢ (S ∪ scalar T) (scalar U) W | no p | intersect W₁ W₂ = intersect (left W₁) W₂
+Unsafe-∩ⁿˢ : ∀ {T U} → (Normal T) → (ErrScalar U) → Unsafe (T ∩ⁿˢ U) → Unsafe (T ∩ U)
+Unsafe-∩ⁿˢ (S ∪ error) error W = ∩-right W -- intersect (right W) W
+-- Unsafe-∩ⁿˢ (S ∪ scalar T) error W with Unsafe-∩ⁿˢ S error W
+-- Unsafe-∩ⁿˢ (S ∪ scalar T) error W | intersect W₁ W₂ = intersect (left W₁) W₂
+-- Unsafe-∩ⁿˢ (S ∪ error) (scalar U) W with Unsafe-∩ⁿˢ S (scalar U) W
+-- Unsafe-∩ⁿˢ (S ∪ error) (scalar U) W | intersect W₁ W₂ = intersect (left W₁) W₂
+-- Unsafe-∩ⁿˢ (S ∪ scalar T) (scalar U) W with T ≡ˢ U
+-- Unsafe-∩ⁿˢ (S ∪ scalar T) (scalar T) W | yes refl = intersect (right W) W
+-- Unsafe-∩ⁿˢ (S ∪ scalar T) (scalar U) W | no p with Unsafe-∩ⁿˢ S (scalar U) W
+-- Unsafe-∩ⁿˢ (S ∪ scalar T) (scalar U) W | no p | intersect W₁ W₂ = intersect (left W₁) W₂
 
-Warningᵀ-∩ⁿ : ∀ {T U} → (Normal T) → (Normal U) → Warningᵀ (T ∩ⁿ U) → Warningᵀ (T ∩ U)
-Warningᵀ-∩ⁿ (S ⇒ T) (U ⇒ V) W = W
-Warningᵀ-∩ⁿ (S ∩ T) (U ⇒ V) W = W
-Warningᵀ-∩ⁿ (S ∪ T) (U ⇒ V) W with Warningᵀ-∩ⁿ S (U ⇒ V) W 
-Warningᵀ-∩ⁿ (S ∪ T) (U ⇒ V) W | intersect W₁ W₂ = intersect (left W₁) W₂
-Warningᵀ-∩ⁿ (S ⇒ T) (U ∩ V) W = W
-Warningᵀ-∩ⁿ (S ∩ T) (U ∩ V) W = W
-Warningᵀ-∩ⁿ (S ∪ T) (U ∩ V) W with Warningᵀ-∩ⁿ S (U ∩ V) W
-Warningᵀ-∩ⁿ (S ∪ T) (U ∩ V) W | intersect W₁ W₂ = intersect (left W₁) W₂
-Warningᵀ-∩ⁿ T (U ∪ V) W with Warningᵀ-∪ⁿˢ (normal-∩ⁿ T U) (normal-∩ⁿˢ T V) W
-Warningᵀ-∩ⁿ T (U ∪ V) W | left W′ with Warningᵀ-∩ⁿ T U W′
-Warningᵀ-∩ⁿ T (U ∪ V) W | left W′ | intersect W₁ W₂ = intersect W₁ (left W₂)
-Warningᵀ-∩ⁿ T (U ∪ V) W | right W′ with Warningᵀ-∩ⁿˢ T V W′
-Warningᵀ-∩ⁿ T (U ∪ V) W | right W′ | intersect W₁ W₂ = intersect W₁ (right W₂)
-Warningᵀ-∩ⁿ T never ()
+Unsafe-∩ⁿ : ∀ {T U} → (Normal T) → (Normal U) → Unsafe (T ∩ⁿ U) → Unsafe (T ∩ U)
+Unsafe-∩ⁿ (S ⇒ T) (U ⇒ V) W = W
+Unsafe-∩ⁿ (S ∩ T) (U ⇒ V) W = W
+-- Unsafe-∩ⁿ (S ∪ T) (U ⇒ V) W with Unsafe-∩ⁿ S (U ⇒ V) W 
+-- Unsafe-∩ⁿ (S ∪ T) (U ⇒ V) W | intersect W₁ W₂ = intersect (left W₁) W₂
+Unsafe-∩ⁿ (S ⇒ T) (U ∩ V) W = W
+Unsafe-∩ⁿ (S ∩ T) (U ∩ V) W = W
+-- Unsafe-∩ⁿ (S ∪ T) (U ∩ V) W with Unsafe-∩ⁿ S (U ∩ V) W
+-- Unsafe-∩ⁿ (S ∪ T) (U ∩ V) W | intersect W₁ W₂ = intersect (left W₁) W₂
+-- Unsafe-∩ⁿ T (U ∪ V) W with Unsafe-∪ⁿˢ (normal-∩ⁿ T U) (normal-∩ⁿˢ T V) W
+-- Unsafe-∩ⁿ T (U ∪ V) W | left W′ with Unsafe-∩ⁿ T U W′
+-- Unsafe-∩ⁿ T (U ∪ V) W | left W′ | intersect W₁ W₂ = intersect W₁ (left W₂)
+-- Unsafe-∩ⁿ T (U ∪ V) W | right W′ with Unsafe-∩ⁿˢ T V W′
+-- Unsafe-∩ⁿ T (U ∪ V) W | right W′ | intersect W₁ W₂ = intersect W₁ (right W₂)
+Unsafe-∩ⁿ T never ()
 
-Warningᵀ-normalize : ∀ T → Warningᵀ (normalize T) → Warningᵀ T
-Warningᵀ-normalize (scalar S) (left ())
-Warningᵀ-normalize (scalar S) (right ())
-Warningᵀ-normalize (S ⇒ T) W = W
-Warningᵀ-normalize any W = any
-Warningᵀ-normalize error W = error
-Warningᵀ-normalize (T ∪ U) W with Warningᵀ-∪ⁿ (normal T) (normal U) W
-Warningᵀ-normalize (T ∪ U) W | left W₁ = left (Warningᵀ-normalize T W₁)
-Warningᵀ-normalize (T ∪ U) W | right W₂ = right (Warningᵀ-normalize U W₂)
-Warningᵀ-normalize (T ∩ U) W with Warningᵀ-∩ⁿ (normal T) (normal U) W
-Warningᵀ-normalize (T ∩ U) W | intersect W₁ W₂ = intersect (Warningᵀ-normalize T W₁) (Warningᵀ-normalize U W₂)
+Unsafe-normalize : ∀ T → Unsafe (normalize T) → Unsafe T
+Unsafe-normalize (scalar S) (∪-left ())
+Unsafe-normalize (scalar S) (∪-right ())
+Unsafe-normalize (S ⇒ T) W = W
+Unsafe-normalize any W = any
+Unsafe-normalize error W = error
+Unsafe-normalize (T ∪ U) W with Unsafe-∪ⁿ (normal T) (normal U) W
+Unsafe-normalize (T ∪ U) W | ∪-left W₁ = ∪-left (Unsafe-normalize T W₁)
+Unsafe-normalize (T ∪ U) W | ∪-right W₂ = ∪-right (Unsafe-normalize U W₂)
+-- Unsafe-normalize (T ∩ U) W with Unsafe-∩ⁿ (normal T) (normal U) W
+-- Unsafe-normalize (T ∩ U) W | intersect W₁ W₂ = intersect (Unsafe-normalize T W₁) (Unsafe-normalize U W₂)
 
-Warningᵀ-resolvedˢ : ∀ {F} → (Fᶠ : FunType F) → (Fˢ : Saturated F) → (V : Type) → (FoundSrcOverload F) → (R : Resolved F V) → Warningᵀ(target R) → Either (V ≮: srcⁿ F) (Warningᵀ F)
-Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p) R W  with dec-subtyping V S
-Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p) R W | Left V≮:S = Left (≮:-trans-<: V≮:S p)
-Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p) (yes Sʳ Tʳ oʳ V<:Sʳ r) W | Right V<:S = Right (Warningᵀ-overload oʳ (result W))
-Warningᵀ-resolvedˢ Fᶠ Fˢ V (found S T o p) (no r) W | Right V<:S = CONTRADICTION (<:-impl-¬≮: V<:S (r o))
+Unsafe-resolvedˢ : ∀ {F} → (Fᶠ : FunType F) → (Fˢ : Saturated F) → (V : Type) → (FoundSrcOverload F) → (R : Resolved F V) → Unsafe(target R) → Either (V ≮: srcⁿ F) (Unsafe F)
+Unsafe-resolvedˢ Fᶠ Fˢ V (found S T o p) R W  with dec-subtyping V S
+Unsafe-resolvedˢ Fᶠ Fˢ V (found S T o p) R W | Left V≮:S = Left (≮:-trans-<: V≮:S p)
+Unsafe-resolvedˢ Fᶠ Fˢ V (found S T o p) (yes Sʳ Tʳ oʳ V<:Sʳ r) W | Right V<:S = Right (Unsafe-overload oʳ (result W))
+Unsafe-resolvedˢ Fᶠ Fˢ V (found S T o p) (no r) W | Right V<:S = CONTRADICTION (<:-impl-¬≮: V<:S (r o))
 
-Warningᵀ-resolveˢ : ∀ {F} → (Fᶠ : FunType F) → (Fˢ : Saturated F) → (V : Type) → Warningᵀ(resolveˢ Fᶠ Fˢ V) → Either (V ≮: srcⁿ F) (Warningᵀ F)
-Warningᵀ-resolveˢ Fᶠ Fˢ V W = Warningᵀ-resolvedˢ Fᶠ Fˢ V (findSrcOverload Fᶠ Fˢ (λ o → o)) (resolveToˢ Fᶠ Fˢ V (λ o → o)) W
+Unsafe-resolveˢ : ∀ {F} → (Fᶠ : FunType F) → (Fˢ : Saturated F) → (V : Type) → Unsafe(resolveˢ Fᶠ Fˢ V) → Either (V ≮: srcⁿ F) (Unsafe F)
+Unsafe-resolveˢ Fᶠ Fˢ V W = Unsafe-resolvedˢ Fᶠ Fˢ V (findSrcOverload Fᶠ Fˢ (λ o → o)) (resolveToˢ Fᶠ Fˢ V (λ o → o)) W
 
-Warningᵀ-resolveᶠ : ∀ {F} → (Fᶠ : FunType F) → ∀ V → Warningᵀ(resolveᶠ Fᶠ V) → Either (V ≮: srcⁿ F) (Warningᵀ F)
-Warningᵀ-resolveᶠ Fᶠ V W = mapLR (λ p → ≮:-trans-<: p (<:-src (normal-saturate Fᶠ) Fᶠ (saturate-<: Fᶠ))) (Warningᵀ-saturateᶠ Fᶠ) (Warningᵀ-resolveˢ (normal-saturate Fᶠ) (saturated Fᶠ) V W)
+Unsafe-resolveᶠ : ∀ {F} → (Fᶠ : FunType F) → ∀ V → Unsafe(resolveᶠ Fᶠ V) → Either (V ≮: srcⁿ F) (Unsafe F)
+Unsafe-resolveᶠ Fᶠ V W = mapLR (λ p → ≮:-trans-<: p (<:-src (normal-saturate Fᶠ) Fᶠ (saturate-<: Fᶠ))) (Unsafe-saturateᶠ Fᶠ) (Unsafe-resolveˢ (normal-saturate Fᶠ) (saturated Fᶠ) V W)
 
-Warningᵀ-resolveⁿ : ∀ {F} → (Fⁿ : Normal F) → ∀ V → Warningᵀ(resolveⁿ Fⁿ V) → Either (F ≮: funktion) (Either (V ≮: srcⁿ F) (Warningᵀ F))
-Warningᵀ-resolveⁿ (T ⇒ U) V W = Right (Warningᵀ-resolveᶠ (T ⇒ U) V W)
-Warningᵀ-resolveⁿ (T ∩ U) V W = Right (Warningᵀ-resolveᶠ (T ∩ U) V W)
-Warningᵀ-resolveⁿ (T ∪ error) V W = Right (Right (right error))
-Warningᵀ-resolveⁿ (T ∪ scalar S) V W = Left (<:-trans-≮: <:-∪-right (scalar-≮:-function S))
+Unsafe-resolveⁿ : ∀ {F} → (Fⁿ : Normal F) → ∀ V → Unsafe(resolveⁿ Fⁿ V) → Either (F ≮: funktion) (Either (V ≮: srcⁿ F) (Unsafe F))
+Unsafe-resolveⁿ (T ⇒ U) V W = Right (Unsafe-resolveᶠ (T ⇒ U) V W)
+Unsafe-resolveⁿ (T ∩ U) V W = Right (Unsafe-resolveᶠ (T ∩ U) V W)
+Unsafe-resolveⁿ (T ∪ error) V W = Right (Right (∪-right error))
+Unsafe-resolveⁿ (T ∪ scalar S) V W = Left (<:-trans-≮: <:-∪-right (scalar-≮:-function S))
 
-Warningᵀ-resolve : ∀ F V → Warningᵀ(resolve F V) → Either (F ≮: funktion) (Either (V ≮: src F) (Warningᵀ F))
-Warningᵀ-resolve F V W with Warningᵀ-resolveⁿ (normal F) V W
-Warningᵀ-resolve F V W | Left p = Left (<:-trans-≮: (normalize-<: F) p)
-Warningᵀ-resolve F V W | Right (Left p) = Right (Left p)
-Warningᵀ-resolve F V W | Right (Right W′) = Right (Right (Warningᵀ-normalize F W′))
+Unsafe-resolve : ∀ F V → Unsafe(resolve F V) → Either (F ≮: funktion) (Either (V ≮: src F) (Unsafe F))
+Unsafe-resolve F V W with Unsafe-resolveⁿ (normal F) V W
+Unsafe-resolve F V W | Left p = Left (<:-trans-≮: (normalize-<: F) p)
+Unsafe-resolve F V W | Right (Left p) = Right (Left p)
+Unsafe-resolve F V W | Right (Right W′) = Right (Right (Unsafe-normalize F W′))
 
-Warningᵀ-impl-Warningᴱ : ∀ H Γ M → Warningᵀ (typeOfᴱ H Γ M) → (Warningᴱ+ H Γ M)
-Warningᵀ-impl-Warningᴱ H Γ (var x) W with remember (Γ [ x ]ⱽ)
-Warningᵀ-impl-Warningᴱ H Γ (var x) W | (nothing , p) = expr (UnboundVariable p)
-Warningᵀ-impl-Warningᴱ H Γ (var x) W | (just T , p) = ctxt (Unsafe x p (subst₁ Warningᵀ (cong orAny p) W  ))
-Warningᵀ-impl-Warningᴱ H Γ (val (addr a)) W with remember (H [ a ]ᴴ)
-Warningᵀ-impl-Warningᴱ H Γ (val (addr a)) W | (nothing , p) = expr (UnallocatedAddress p)
-Warningᵀ-impl-Warningᴱ H Γ (val (addr a)) W | (just (function f ⟨ var x ∈ T ⟩∈ U is B end) , p) = heap (addr a p (UnsafeFunction (subst₁ Warningᵀ (cong orAny (cong typeOfᴹᴼ p)) W)))
-Warningᵀ-impl-Warningᴱ H Γ (M $ N) W with Warningᵀ-resolve (typeOfᴱ H Γ M) (typeOfᴱ H Γ N) W
-Warningᵀ-impl-Warningᴱ H Γ (M $ N) W | Left p = expr (NotFunctionCall p)
-Warningᵀ-impl-Warningᴱ H Γ (M $ N) W | Right (Left p) = expr (FunctionCallMismatch p)
-Warningᵀ-impl-Warningᴱ H Γ (M $ N) W | Right (Right V) = mapᴱ+ app₁ (Warningᵀ-impl-Warningᴱ H Γ M V)
-Warningᵀ-impl-Warningᴱ H Γ (function f ⟨ var c ∈ T ⟩∈ U is B end) W = expr (UnsafeFunction W)
-Warningᵀ-impl-Warningᴱ H Γ (block var b ∈ T is B end) W = expr (UnsafeBlock W)
-Warningᵀ-impl-Warningᴱ H Γ (binexp M ·· N) ()
+Unsafe-impl-Warningᴱ : ∀ H Γ M → Unsafe (typeOfᴱ H Γ M) → (Warningᴱ+ H Γ M)
+Unsafe-impl-Warningᴱ H Γ (var x) W with remember (Γ [ x ]ⱽ)
+Unsafe-impl-Warningᴱ H Γ (var x) W | (nothing , p) = expr (UnboundVariable p)
+Unsafe-impl-Warningᴱ H Γ (var x) W | (just T , p) = ctxt (UnsafeVar x p (subst₁ Unsafe (cong orAny p) W  ))
+Unsafe-impl-Warningᴱ H Γ (val (addr a)) W with remember (H [ a ]ᴴ)
+Unsafe-impl-Warningᴱ H Γ (val (addr a)) W | (nothing , p) = expr (UnallocatedAddress p)
+Unsafe-impl-Warningᴱ H Γ (val (addr a)) W | (just (function f ⟨ var x ∈ T ⟩∈ U is B end) , p) = heap (addr a p (UnsafeFunction (subst₁ Unsafe (cong orAny (cong typeOfᴹᴼ p)) W)))
+Unsafe-impl-Warningᴱ H Γ (M $ N) W with Unsafe-resolve (typeOfᴱ H Γ M) (typeOfᴱ H Γ N) W
+Unsafe-impl-Warningᴱ H Γ (M $ N) W | Left p = expr (NotFunctionCall p)
+Unsafe-impl-Warningᴱ H Γ (M $ N) W | Right (Left p) = expr (FunctionCallMismatch p)
+Unsafe-impl-Warningᴱ H Γ (M $ N) W | Right (Right V) = mapᴱ+ app₁ (Unsafe-impl-Warningᴱ H Γ M V)
+Unsafe-impl-Warningᴱ H Γ (function f ⟨ var c ∈ T ⟩∈ U is B end) W = expr (UnsafeFunction W)
+Unsafe-impl-Warningᴱ H Γ (block var b ∈ T is B end) W = expr (UnsafeBlock W)
+Unsafe-impl-Warningᴱ H Γ (binexp M ·· N) ()
 
 -- typeOfᴱ<:unknown : ∀ H Γ M → Either (Warningᴱ+ H Γ M) (typeOfᴱ H Γ M <: unknown)
 -- typeOfᴱ<:unknown H Γ (var x) with remember (Γ [ x ]ⱽ)
@@ -499,8 +496,8 @@ reflect-substitutionᴱ H (val (addr a)) v x (UnallocatedAddress r) = Left (expr
 reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch p) with ≮:-substitutivityᴱ H N v x p
 reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch p) | Right W = Right (Right W)
 reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch p) | Left q with ≮:-substitutivityᴱ H M v x (src-any-≮: q)
-reflect-substitutionᴱ {Γ} {T} H (M $ N) v x (FunctionCallMismatch p) | Left q | Left r with dec-Warningᵀ (typeOfᴱ H (Γ ⊕ x ↦ T) M)
-reflect-substitutionᴱ {Γ} {T} H (M $ N) v x (FunctionCallMismatch p) | Left q | Left r | Left W = Left (mapᴱ+ app₁ (Warningᵀ-impl-Warningᴱ H (Γ ⊕ x ↦ T) M W))
+reflect-substitutionᴱ {Γ} {T} H (M $ N) v x (FunctionCallMismatch p) | Left q | Left r with dec-Unsafe (typeOfᴱ H (Γ ⊕ x ↦ T) M)
+reflect-substitutionᴱ {Γ} {T} H (M $ N) v x (FunctionCallMismatch p) | Left q | Left r | Left W = Left (mapᴱ+ app₁ (Unsafe-impl-Warningᴱ H (Γ ⊕ x ↦ T) M W))
 reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch p) | Left q | Left r | Right ¬W = Left (expr (FunctionCallMismatch (any-src-≮: q (<:-unknown ¬W) r)))
 reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch p) | Left q | Right W = Right (Right W)
 reflect-substitutionᴱ H (M $ N) v x (NotFunctionCall p) with ≮:-substitutivityᴱ H M v x p
@@ -513,9 +510,9 @@ reflect-substitutionᴱ H (function f ⟨ var y ∈ T ⟩∈ U is B end) v x (Un
 reflect-substitutionᴱ H (function f ⟨ var y ∈ T ⟩∈ U is B end) v x (function₁ W) with reflect-substitutionᴮ-unless H B v x y (x ≡ⱽ y) W
 reflect-substitutionᴱ H (function f ⟨ var y ∈ T ⟩∈ U is B end) v x (function₁ W) | Left (block W′) = Left (expr (function₁ W′))
 reflect-substitutionᴱ H (function f ⟨ var y ∈ T ⟩∈ U is B end) v x (function₁ W) | Left (heap W′) = Left (heap W′)
-reflect-substitutionᴱ H (function f ⟨ var y ∈ T ⟩∈ U is B end) v x (function₁ W) | Left (ctxt (Unsafe z p W′)) with y ≡ⱽ z
-reflect-substitutionᴱ H (function f ⟨ var y ∈ T ⟩∈ U is B end) v x (function₁ W) | Left (ctxt (Unsafe y refl W′)) | yes refl = Left (expr (UnsafeFunction (param W′)))
-reflect-substitutionᴱ {Γ} {S} H (function f ⟨ var y ∈ T ⟩∈ U is B end) v x (function₁ W) | Left (ctxt (Unsafe z p W′)) | no y≠z = Left (ctxt (Unsafe z (trans (⊕-lookup-miss y z T (Γ ⊕ x ↦ S) y≠z) p) W′))
+reflect-substitutionᴱ H (function f ⟨ var y ∈ T ⟩∈ U is B end) v x (function₁ W) | Left (ctxt (UnsafeVar z p W′)) with y ≡ⱽ z
+reflect-substitutionᴱ H (function f ⟨ var y ∈ T ⟩∈ U is B end) v x (function₁ W) | Left (ctxt (UnsafeVar y refl W′)) | yes refl = Left (expr (UnsafeFunction (param W′)))
+reflect-substitutionᴱ {Γ} {S} H (function f ⟨ var y ∈ T ⟩∈ U is B end) v x (function₁ W) | Left (ctxt (UnsafeVar z p W′)) | no y≠z = Left (ctxt (UnsafeVar z (trans (⊕-lookup-miss y z T (Γ ⊕ x ↦ S) y≠z) p) W′))
 reflect-substitutionᴱ H (function f ⟨ var y ∈ T ⟩∈ U is B end) v x (function₁ W) | Right W′ = Right W′
 reflect-substitutionᴱ H (block var b ∈ T is B end) v x (BlockMismatch q) = mapLR (expr ∘ BlockMismatch) Right (≮:-substitutivityᴮ H B v x q)
 reflect-substitutionᴱ H (block var b ∈ T is B end) v x (UnsafeBlock W′) = Left (expr (UnsafeBlock W′))
@@ -533,16 +530,16 @@ reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v
 reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₁ W) with reflect-substitutionᴮ-unless H C v x y (x ≡ⱽ y) W
 reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₁ W) | Left (block W′) = Left (block (function₁ W′))
 reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₁ W) | Left (heap W′) = Left (heap W′)
-reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₁ W) | Left (ctxt (Unsafe z p W′)) with y ≡ⱽ z
-reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₁ W) | Left (ctxt (Unsafe y refl W′)) | yes refl = Left (block (UnsafeFunction (param W′)))
-reflect-substitutionᴮ {Γ} {S} H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₁ W) | Left (ctxt (Unsafe z p W′)) | no y≠z = Left (ctxt (Unsafe z (trans (⊕-lookup-miss y z T (Γ ⊕ x ↦ S) y≠z) p) W′))
+reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₁ W) | Left (ctxt (UnsafeVar z p W′)) with y ≡ⱽ z
+reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₁ W) | Left (ctxt (UnsafeVar y refl W′)) | yes refl = Left (block (UnsafeFunction (param W′)))
+reflect-substitutionᴮ {Γ} {S} H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₁ W) | Left (ctxt (UnsafeVar z p W′)) | no y≠z = Left (ctxt (UnsafeVar z (trans (⊕-lookup-miss y z T (Γ ⊕ x ↦ S) y≠z) p) W′))
 reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₁ W) | Right W′ = Right W′
 reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₂ W) with reflect-substitutionᴮ-unless H B v x f (x ≡ⱽ f) W
 reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₂ W) | Left (block W′) = Left (block (function₂ W′))
 reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₂ W) | Left (heap W′) = Left (heap W′)
-reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₂ W) | Left (ctxt (Unsafe z p W′)) with f ≡ⱽ z
-reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₂ W) | Left (ctxt (Unsafe f refl W′)) | yes refl = Left (block (UnsafeFunction W′))
-reflect-substitutionᴮ {Γ} {S} H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₂ W) | Left (ctxt (Unsafe z p W′)) | no f≠z = Left (ctxt (Unsafe z (trans (⊕-lookup-miss f z (T ⇒ U) (Γ ⊕ x ↦ S) f≠z) p) W′))
+reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₂ W) | Left (ctxt (UnsafeVar z p W′)) with f ≡ⱽ z
+reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₂ W) | Left (ctxt (UnsafeVar f refl W′)) | yes refl = Left (block (UnsafeFunction W′))
+reflect-substitutionᴮ {Γ} {S} H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₂ W) | Left (ctxt (UnsafeVar z p W′)) | no f≠z = Left (ctxt (UnsafeVar z (trans (⊕-lookup-miss f z (T ⇒ U) (Γ ⊕ x ↦ S) f≠z) p) W′))
 reflect-substitutionᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) v x (function₂ W) | Right W′ = Right W′
 reflect-substitutionᴮ H (local var y ∈ T ← M ∙ B) v x (LocalVarMismatch q) = mapLR (block ∘ LocalVarMismatch) Right (≮:-substitutivityᴱ H M v x q)
 reflect-substitutionᴮ H (local var y ∈ T ← M ∙ B) v x (UnsafeLocal W) = Left (block (UnsafeLocal W))
@@ -550,9 +547,9 @@ reflect-substitutionᴮ H (local var y ∈ T ← M ∙ B) v x (local₁ W) = map
 reflect-substitutionᴮ H (local var y ∈ T ← M ∙ B) v x (local₂ W) with reflect-substitutionᴮ-unless H B v x y (x ≡ⱽ y) W
 reflect-substitutionᴮ H (local var y ∈ T ← M ∙ B) v x (local₂ W) | Left (block W′) = Left (block (local₂ W′))
 reflect-substitutionᴮ H (local var y ∈ T ← M ∙ B) v x (local₂ W) | Left (heap W′) = Left (heap W′)
-reflect-substitutionᴮ H (local var y ∈ T ← M ∙ B) v x (local₂ W) | Left (ctxt (Unsafe z p W′)) with y ≡ⱽ z
-reflect-substitutionᴮ H (local var y ∈ T ← M ∙ B) v x (local₂ W) | Left (ctxt (Unsafe y refl W′)) | yes refl = Left (block (UnsafeLocal W′))
-reflect-substitutionᴮ {Γ} {S} H (local var y ∈ T ← M ∙ B) v x (local₂ W) | Left (ctxt (Unsafe z p W′)) | no y≠z = Left (ctxt (Unsafe z (trans (⊕-lookup-miss y z T (Γ ⊕ x ↦ S) y≠z) p) W′))
+reflect-substitutionᴮ H (local var y ∈ T ← M ∙ B) v x (local₂ W) | Left (ctxt (UnsafeVar z p W′)) with y ≡ⱽ z
+reflect-substitutionᴮ H (local var y ∈ T ← M ∙ B) v x (local₂ W) | Left (ctxt (UnsafeVar y refl W′)) | yes refl = Left (block (UnsafeLocal W′))
+reflect-substitutionᴮ {Γ} {S} H (local var y ∈ T ← M ∙ B) v x (local₂ W) | Left (ctxt (UnsafeVar z p W′)) | no y≠z = Left (ctxt (UnsafeVar z (trans (⊕-lookup-miss y z T (Γ ⊕ x ↦ S) y≠z) p) W′))
 reflect-substitutionᴮ H (local var y ∈ T ← M ∙ B) v x (local₂ W) | Right W′ = Right W′
 reflect-substitutionᴮ H (return M ∙ B) v x (return W) = mapL (mapᴱᴮ+ return) (reflect-substitutionᴱ H M v x W)
 
@@ -602,8 +599,8 @@ reflect-weakeningᴼ H (just function f ⟨ var x ∈ T ⟩∈ U is B end) h (fu
 reflectᴱ : ∀ H M {H′ M′} → (H ⊢ M ⟶ᴱ M′ ⊣ H′) → Warningᴱ H′ (typeCheckᴱ H′ ∅ M′) → Warningᴱ+ H ∅ M
 reflectᴮ : ∀ H B {H′ B′} → (H ⊢ B ⟶ᴮ B′ ⊣ H′) → Warningᴮ H′ (typeCheckᴮ H′ ∅ B′) → Warningᴮ+ H ∅ B
 
-reflectᴱ H (M $ N) s W′ with dec-Warningᵀ (typeOfᴱ H ∅ M)
-reflectᴱ H (M $ N) s W′ | Left W = mapᴱ+ app₁ (Warningᵀ-impl-Warningᴱ H ∅ M W)
+reflectᴱ H (M $ N) s W′ with dec-Unsafe (typeOfᴱ H ∅ M)
+reflectᴱ H (M $ N) s W′ | Left W = mapᴱ+ app₁ (Unsafe-impl-Warningᴱ H ∅ M W)
 reflectᴱ H (M $ N) (app₁ s) (FunctionCallMismatch p) | Right ¬W = cond (expr ∘ FunctionCallMismatch ∘ ≮:-heap-weakeningᴱ ∅ H N (rednᴱ⊑ s) ∘ any-src-≮: p (<:-unknown ¬W)) (expr ∘ app₁) (≮:-reductionᴱ H M s (src-any-≮: p))
 reflectᴱ H (M $ N) (app₁ s) (NotFunctionCall p) | Right ¬W = cond (expr ∘ NotFunctionCall) (expr ∘ app₁) (≮:-reductionᴱ H M s p)
 reflectᴱ H (M $ N) (app₁ s) (app₁ W′) | Right ¬W  = mapᴱ+ app₁ (reflectᴱ H M s W′)
@@ -621,9 +618,9 @@ reflectᴱ H (val (addr a) $ N) (beta (function f ⟨ var x ∈ T ⟩∈ U is B 
 reflectᴱ H (val (addr a) $ N) (beta (function f ⟨ var x ∈ T ⟩∈ U is B end) v refl p) (block₁ W′) | Right ¬W with reflect-substitutionᴮ _ B v x W′
 reflectᴱ H (val (addr a) $ N) (beta (function f ⟨ var x ∈ T ⟩∈ U is B end) v refl p) (block₁ W′) | Right ¬W | Left (block W) = heap (addr a p (function₁ W))
 reflectᴱ H (val (addr a) $ N) (beta (function f ⟨ var x ∈ T ⟩∈ U is B end) v refl p) (block₁ W′) | Right ¬W | Left (heap W) = heap W
-reflectᴱ H (val (addr a) $ N) (beta (function f ⟨ var x ∈ T ⟩∈ U is B end) v refl p) (block₁ W′) | Right ¬W | Left (ctxt (Unsafe y q W)) with x ≡ⱽ y
-reflectᴱ H (val (addr a) $ N) (beta (function f ⟨ var x ∈ T ⟩∈ U is B end) v refl p) (block₁ W′) | Right ¬W | Left (ctxt (Unsafe x refl W)) | yes refl = heap (addr a p (UnsafeFunction (param W)))
-reflectᴱ H (val (addr a) $ N) (beta (function f ⟨ var x ∈ T ⟩∈ U is B end) v refl p) (block₁ W′) | Right ¬W | Left (ctxt (Unsafe y q W)) | no x≠y = ctxt (Unsafe y (trans (⊕-lookup-miss x y T ∅ x≠y) q) W)
+reflectᴱ H (val (addr a) $ N) (beta (function f ⟨ var x ∈ T ⟩∈ U is B end) v refl p) (block₁ W′) | Right ¬W | Left (ctxt (UnsafeVar y q W)) with x ≡ⱽ y
+reflectᴱ H (val (addr a) $ N) (beta (function f ⟨ var x ∈ T ⟩∈ U is B end) v refl p) (block₁ W′) | Right ¬W | Left (ctxt (UnsafeVar x refl W)) | yes refl = heap (addr a p (UnsafeFunction (param W)))
+reflectᴱ H (val (addr a) $ N) (beta (function f ⟨ var x ∈ T ⟩∈ U is B end) v refl p) (block₁ W′) | Right ¬W | Left (ctxt (UnsafeVar y q W)) | no x≠y = ctxt (UnsafeVar y (trans (⊕-lookup-miss x y T ∅ x≠y) q) W)
 reflectᴱ H (val (addr a) $ N) (beta (function f ⟨ var x ∈ T ⟩∈ U is B end) v refl p) (block₁ W′) | Right ¬W | Right (Left W) = expr (app₂ W)
 reflectᴱ H (val (addr a) $ N) (beta (function f ⟨ var x ∈ T ⟩∈ U is B end) v refl p) (block₁ W′) | Right ¬W | Right (Right q) = expr (FunctionCallMismatch (≮:-trans-≡ q (cong src (cong orAny (cong typeOfᴹᴼ (sym p))))))
 reflectᴱ H (block var b ∈ T is B end) (block s) (BlockMismatch p) = expr (cond BlockMismatch block₁ (≮:-reductionᴮ H B s p))
@@ -648,9 +645,9 @@ reflectᴮ H (local var x ∈ T ← M ∙ B) (local s) (UnsafeLocal W′) = bloc
 reflectᴮ H (local var x ∈ T ← M ∙ B) (subst v) W′ with reflect-substitutionᴮ H B v x W′
 reflectᴮ H (local var x ∈ T ← M ∙ B) (subst v) W′ | Left (block W) = block (local₂ W)
 reflectᴮ H (local var x ∈ T ← M ∙ B) (subst v) W′ | Left (heap W) = heap W
-reflectᴮ H (local var x ∈ T ← M ∙ B) (subst v) W′ | Left (ctxt (Unsafe y p W)) with x ≡ⱽ y
-reflectᴮ H (local var x ∈ T ← M ∙ B) (subst v) W′ | Left (ctxt (Unsafe x refl W)) | yes refl = block (UnsafeLocal W)
-reflectᴮ H (local var x ∈ T ← M ∙ B) (subst v) W′ | Left (ctxt (Unsafe y p W)) | no x≠y = ctxt (Unsafe y (trans (⊕-lookup-miss x y T ∅ x≠y) p) W)
+reflectᴮ H (local var x ∈ T ← M ∙ B) (subst v) W′ | Left (ctxt (UnsafeVar y p W)) with x ≡ⱽ y
+reflectᴮ H (local var x ∈ T ← M ∙ B) (subst v) W′ | Left (ctxt (UnsafeVar x refl W)) | yes refl = block (UnsafeLocal W)
+reflectᴮ H (local var x ∈ T ← M ∙ B) (subst v) W′ | Left (ctxt (UnsafeVar y p W)) | no x≠y = ctxt (UnsafeVar y (trans (⊕-lookup-miss x y T ∅ x≠y) p) W)
 reflectᴮ H (local var x ∈ T ← M ∙ B) (subst v) W′ | Right (Left W) = block (local₁ W)
 reflectᴮ H (local var x ∈ T ← M ∙ B) (subst v) W′ | Right (Right W) = block (LocalVarMismatch W)
 reflectᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) (function a defn) W′ with reflect-substitutionᴮ _ B (addr a) f W′
@@ -660,9 +657,9 @@ reflectᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) (function a de
 reflectᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) (function a defn) W′ | Left (heap (addr a refl (function₁ W))) | yes refl = block (function₁ (reflect-weakeningᴮ (y ↦ T) H C (snoc defn) W))
 reflectᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) (function a defn) W′ | Left (heap (addr a refl (UnsafeFunction W))) | yes refl = block (UnsafeFunction W)
 reflectᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) (function a defn) W′ | Left (heap (addr b p W)) | no a≠b = heap (addr b (trans (lookup-not-allocated {H = H} defn a≠b) p) (reflect-weakeningᴼ H _ (snoc defn) W))
-reflectᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) (function a defn) W′ | Left (ctxt (Unsafe x p W)) with f ≡ⱽ x
-reflectᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) (function a defn) W′ | Left (ctxt (Unsafe x refl W)) | yes refl = block (UnsafeFunction W)
-reflectᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) (function a defn) W′ | Left (ctxt (Unsafe x p W)) | no f≠x = ctxt (Unsafe x (trans (⊕-lookup-miss f x (T ⇒ U) ∅ f≠x) p) W)
+reflectᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) (function a defn) W′ | Left (ctxt (UnsafeVar x p W)) with f ≡ⱽ x
+reflectᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) (function a defn) W′ | Left (ctxt (UnsafeVar x refl W)) | yes refl = block (UnsafeFunction W)
+reflectᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) (function a defn) W′ | Left (ctxt (UnsafeVar x p W)) | no f≠x = ctxt (UnsafeVar x (trans (⊕-lookup-miss f x (T ⇒ U) ∅ f≠x) p) W)
 reflectᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) (function a defn) W′ | Right (Left (UnallocatedAddress ()))
 reflectᴮ H (function f ⟨ var y ∈ T ⟩∈ U is C end ∙ B) (function a defn) W′ | Right (Right p) = CONTRADICTION (≮:-refl p)
 reflectᴮ H (return M ∙ B) (return s) (return W′) = mapᴱᴮ+ return (reflectᴱ H M s W′)
@@ -685,7 +682,7 @@ reflectᴱ+ H (block var b ∈ T is done end) done (heap W) = heap W
 reflectᴱ+ H (binexp M op N) (binOp₀ s) (heap W) = heap W
 reflectᴱ+ H (binexp M op N) (binOp₁ s) (heap W) = mapᴱ+ bin₁ (reflectᴱ+ H M s (heap W))
 reflectᴱ+ H (binexp M op N) (binOp₂ s) (heap W) = mapᴱ+ bin₂ (reflectᴱ+ H N s (heap W))
-reflectᴱ+ H M S (ctxt (Unsafe x () W′))
+reflectᴱ+ H M S (ctxt (UnsafeVar x () W′))
 
 reflectᴮ+ H B S (block W′) = reflectᴮ H B S W′
 reflectᴮ+ H (function f ⟨ var x ∈ T ⟩∈ U is C end ∙ B) (function a p) (heap (addr b refl W)) with b ≡ᴬ a
@@ -696,7 +693,7 @@ reflectᴮ+ H (function f ⟨ var x ∈ T ⟩∈ U is C end ∙ B) (function a p
 reflectᴮ+ H (local var x ∈ T ← M ∙ B) (local s) (heap W) = mapᴱᴮ+ local₁ (reflectᴱ+ H M s (heap W))
 reflectᴮ+ H (local var x ∈ T ← M ∙ B) (subst v) (heap W) = heap W
 reflectᴮ+ H (return M ∙ B) (return s) (heap W) = mapᴱᴮ+ return (reflectᴱ+ H M s (heap W))
-reflectᴮ+ H B S (ctxt (Unsafe x () W′))
+reflectᴮ+ H B S (ctxt (UnsafeVar x () W′))
 
 reflect* : ∀ H B {H′ B′} → (H ⊢ B ⟶* B′ ⊣ H′) → Warningᴮ+ H′ ∅ B′ → Warningᴮ+ H ∅ B
 reflect* H B refl W = W
@@ -767,5 +764,5 @@ runtimeWarningᴮ H (return M ∙ B) (return err) = return (runtimeWarningᴱ H 
 wellTypedProgramsDontGoWrong : ∀ H′ B B′ → (∅ᴴ ⊢ B ⟶* B′ ⊣ H′) → (RuntimeErrorᴮ H′ B′) → Warningᴮ ∅ᴴ (typeCheckᴮ ∅ᴴ ∅ B)
 wellTypedProgramsDontGoWrong H′ B B′ t err with reflect* ∅ᴴ B t (block (runtimeWarningᴮ H′ B′ err))
 wellTypedProgramsDontGoWrong H′ B B′ t err | heap (addr a refl ())
-wellTypedProgramsDontGoWrong H′ B B′ t err | ctxt (Unsafe x () p)
+wellTypedProgramsDontGoWrong H′ B B′ t err | ctxt (UnsafeVar x () p)
 wellTypedProgramsDontGoWrong H′ B B′ t err | block W = W

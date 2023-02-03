@@ -17,24 +17,24 @@ open import Properties.Contradiction using (¬)
 open import Properties.TypeCheck using (typeCheckᴮ)
 open import Properties.Product using (_,_)
 
-data Warningᵀ : Type → Set where
+data Unsafe : Type → Set where
 
-  any : Warningᵀ any
-  error : Warningᵀ error
-  intersect : ∀ {T U} → Warningᵀ T → Warningᵀ U → Warningᵀ (T ∩ U)
-  left : ∀ {T U} → Warningᵀ T → Warningᵀ (T ∪ U)
-  right : ∀ {T U} → Warningᵀ U → Warningᵀ (T ∪ U)
-  param : ∀ {T U} → Warningᵀ T → Warningᵀ (T ⇒ U)
-  result : ∀ {T U} → Warningᵀ U → Warningᵀ (T ⇒ U)
+  any : Unsafe any
+  error : Unsafe error
+  ∪-left : ∀ {T U} → Unsafe T → Unsafe (T ∪ U)
+  ∪-right : ∀ {T U} → Unsafe U → Unsafe (T ∪ U)
+  ∩-left : ∀ {T U} → Unsafe T → Unsafe (T ∩ U)
+  ∩-right : ∀ {T U} → Unsafe U → Unsafe (T ∩ U)
+  param : ∀ {T U} → Unsafe T → Unsafe (T ⇒ U)
+  result : ∀ {T U} → Unsafe U → Unsafe (T ⇒ U)
 
-data ¬Warningᵀ : Type → Set where
+data Safe : Type → Set where
 
-  never : ¬Warningᵀ never
-  union : ∀ {T U} → ¬Warningᵀ T → ¬Warningᵀ U → ¬Warningᵀ (T ∪ U)
-  left : ∀ {T U} → ¬Warningᵀ T → ¬Warningᵀ (T ∩ U)
-  right : ∀ {T U} → ¬Warningᵀ U → ¬Warningᵀ (T ∩ U)
-  function : ∀ {T U} → ¬Warningᵀ T → ¬Warningᵀ U → ¬Warningᵀ (T ⇒ U)
-  scalar : ∀ S → ¬Warningᵀ(scalar S)
+  never : Safe never
+  _∩_ : ∀ {T U} → Safe T → Safe U → Safe (T ∩ U)
+  _∪_ : ∀ {T U} → Safe T → Safe U → Safe (T ∪ U)
+  function : ∀ {T U} → Safe T → Safe U → Safe (T ⇒ U)
+  scalar : ∀ S → Safe (scalar S)
 
 data Warningᴱ (H : Heap yes) {Γ} : ∀ {M T} → (Γ ⊢ᴱ M ∈ T) → Set
 data Warningᴮ (H : Heap yes) {Γ} : ∀ {B T} → (Γ ⊢ᴮ B ∈ T) → Set
@@ -127,13 +127,13 @@ data Warningᴱ H {Γ} where
 
   UnsafeBlock : ∀ {b B T U} {D : Γ ⊢ᴮ B ∈ U} →
 
-    Warningᵀ T →
+    Unsafe T →
     ------------------------------
     Warningᴱ H (block {b} {T = T} D)
 
   UnsafeFunction : ∀ {f x B T U V} {D : (Γ ⊕ x ↦ T) ⊢ᴮ B ∈ V} →
 
-    Warningᵀ (T ⇒ U) →
+    Unsafe (T ⇒ U) →
     -------------------------
     Warningᴱ H (function {f} {T = T} {U = U} D)
 
@@ -183,13 +183,13 @@ data Warningᴮ H {Γ} where
 
   UnsafeLocal : ∀ {x M B T U V} {D₁ : Γ ⊢ᴱ M ∈ U} {D₂ : (Γ ⊕ x ↦ T) ⊢ᴮ B ∈ V} →
 
-    Warningᵀ T →
+    Unsafe T →
     --------------------
     Warningᴮ H (local D₁ D₂)
 
   UnsafeFunction : ∀ {f x B C T U V W} {D₁ : (Γ ⊕ x ↦ T) ⊢ᴮ C ∈ V} {D₂ : (Γ ⊕ f ↦ (T ⇒ U)) ⊢ᴮ B ∈ W} →
 
-    Warningᵀ (T ⇒ U) →
+    Unsafe (T ⇒ U) →
     --------------------
     Warningᴮ H (function D₁ D₂)
     
@@ -209,7 +209,7 @@ data Warningᴼ (H : Heap yes) : ∀ {V} → (⊢ᴼ V) → Set where
 
   UnsafeFunction : ∀ {f x B T U V} {D : (x ↦ T) ⊢ᴮ B ∈ V} →
 
-    Warningᵀ (T ⇒ U) →
+    Unsafe (T ⇒ U) →
     ---------------------------------
     Warningᴼ H (function {f} {U = U} D)
 
