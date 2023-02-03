@@ -147,9 +147,6 @@ findSrcOverload (G₁ᶠ ∩ G₂ᶠ) (defn cap cup) G⊆F | found S₁ T₁ o�
 FoundSrcOverload : Type → Set
 FoundSrcOverload F = FoundSrcOverloadTo F F
 
-<:-src : ∀ {F G} → (Fᶠ : FunType F) → (Gᶠ : FunType G) → F <: G → srcⁿ G <: srcⁿ F
-<:-src = {!!}
-
 Unsafe-overload : ∀ {F S T} → Overloads F (S ⇒ T) → Unsafe (S ⇒ T) → Unsafe F
 Unsafe-overload here W = W
 Unsafe-overload (left o) W = ∩-left (Unsafe-overload o W)

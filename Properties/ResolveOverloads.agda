@@ -117,6 +117,29 @@ any-src-≮: _ p (witness q function-error) = CONTRADICTION (language-comp ((((f
                                                                               scalar-error STRING)
                                                                              , scalar-error NIL)
                                                                             , scalar-error BOOLEAN) (p q))
+
+<:-srcᶠ : ∀ {F G} → (Fᶠ : FunType F) → (Gᶠ : FunType G) → F <: G → srcⁿ G <: srcⁿ F
+<:-srcᶠ = {!!}
+
+<:-srcⁿ : ∀ {T U} → (Tⁿ : Normal T) → (Uⁿ : Normal U) → T <: U → srcⁿ U <: srcⁿ T
+<:-srcⁿ T (U ∪ V) p = <:-never
+<:-srcⁿ never U p = <:-any
+<:-srcⁿ (S ⇒ T) never p = CONTRADICTION (<:-impl-¬≮: p function-≮:-never)
+<:-srcⁿ (F ∩ G) never p = CONTRADICTION (<:-impl-¬≮: p (fun-≮:-never (F ∩ G)))
+<:-srcⁿ (S ∪ error) never p = CONTRADICTION (<:-impl-¬≮: p (<:-trans-≮: <:-∪-right error-≮:-never))
+<:-srcⁿ (S ∪ scalar T) never p = CONTRADICTION (<:-impl-¬≮: p (<:-trans-≮: <:-∪-right (scalar-≮:-never T)))
+<:-srcⁿ (S ∪ error) (U ⇒ V) p = CONTRADICTION (<:-impl-¬≮: p (<:-trans-≮: <:-∪-right (error-≮:-fun (U ⇒ V))))
+<:-srcⁿ (S ∪ scalar T) (U ⇒ V) p = CONTRADICTION (<:-impl-¬≮: p (<:-trans-≮: <:-∪-right (scalar-≮:-function T)))
+<:-srcⁿ (S ∪ error) (G ∩ H) p = CONTRADICTION (<:-impl-¬≮: p (<:-trans-≮: <:-∪-right (error-≮:-fun (G ∩ H))))
+<:-srcⁿ (S ∪ scalar T) (G ∩ H) p = CONTRADICTION (<:-impl-¬≮: p (<:-trans-≮: <:-∪-right (scalar-≮:-fun (G ∩ H) T)))
+<:-srcⁿ (S ⇒ T) (U ⇒ V) p = <:-srcᶠ (S ⇒ T) (U ⇒ V) p
+<:-srcⁿ (S ⇒ T) (G ∩ H) p = <:-srcᶠ (S ⇒ T) (G ∩ H) p
+<:-srcⁿ (E ∩ F) (U ⇒ V) p = <:-srcᶠ (E ∩ F) (U ⇒ V) p
+<:-srcⁿ (E ∩ F) (G ∩ H) p = <:-srcᶠ (E ∩ F) (G ∩ H) p
+
+<:-src : ∀ T U → T <: U → src U <: src T
+<:-src T U T<:U = <:-srcⁿ (normal T) (normal U) (<:-trans (normalize-<: T) (<:-trans T<:U (<:-normalize U)))
+
 -- Properties of resolve
 resolveˢ-<:-⇒ : ∀ {F V U} → (FunType F) → (Saturated F) → (FunType (V ⇒ U)) → (r : Resolved F V) → (F <: (V ⇒ U)) → (target r <: U)
 resolveˢ-<:-⇒ Fᶠ Fˢ V⇒Uᶠ r F<:V⇒U with <:-impl-<:ᵒ Fᶠ Fˢ V⇒Uᶠ F<:V⇒U here
