@@ -15,10 +15,10 @@ open import Luau.Syntax using (Expr; yes; var; val; var_∈_; _⟨_⟩∈_; _$_;
 open import Luau.Type using (Type; NIL; NUMBER; STRING; BOOLEAN; nill; number; string; boolean; scalar; error; unknown; funktion; _⇒_; never; any; _∩_; _∪_; _≡ᵀ_; _≡ᴹᵀ_; _≡ˢ_)
 open import Luau.TypeCheck using (_⊢ᴮ_∈_; _⊢ᴱ_∈_; _⊢ᴴᴮ_▷_∈_; _⊢ᴴᴱ_▷_∈_; nil; var; addr; app; function; block; done; return; local; orAny; srcBinOp; tgtBinOp)
 open import Luau.TypeNormalization using (normalize; _∩ⁿ_; _∪ⁿ_; _∪ⁿˢ_; _∩ⁿˢ_; _∪ᶠ_)
-open import Luau.TypeSaturation using (saturate; ∩-saturate; ∪-saturate)
+open import Luau.TypeSaturation using (saturate; ∩-saturate; ∪-saturate; _⋒_; _⋓_)
 open import Luau.Var using (_≡ⱽ_)
 open import Luau.Addr using (_≡ᴬ_)
-open import Luau.VarCtxt using (VarCtxt; ∅; _⋒_; _↦_; _⊕_↦_; _⊝_; ⊕-lookup-miss; ⊕-swap; ⊕-over) renaming (_[_] to _[_]ⱽ)
+open import Luau.VarCtxt using (VarCtxt; ∅; _↦_; _⊕_↦_; _⊝_; ⊕-lookup-miss; ⊕-swap; ⊕-over) renaming (_[_] to _[_]ⱽ)
 open import Luau.VarCtxt using (VarCtxt; ∅)
 open import Properties.Remember using (remember; _,_)
 open import Properties.Equality using (_≢_; sym; cong; trans; subst₁; cong₂)
@@ -31,7 +31,7 @@ open import Properties.ResolveOverloads using (src-any-≮:; any-src-≮:; <:-re
 open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; <:-trans-≮:; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; any-≮:-scalar; scalar-≮:-never; any-≮:-never; ≡-impl-<:; ≡-trans-<:; <:-trans-≡; ≮:-trans-<:; <:-trans)
 open import Properties.TypeCheck using (typeOfᴼ; typeOfᴹᴼ; typeOfⱽ; typeOfᴱ; typeOfᴮ; typeCheckᴱ; typeCheckᴮ; typeCheckᴼ; typeCheckᴴ)
 open import Properties.TypeNormalization using (normal; Normal; FunType; ErrScalar; OptScalar; _⇒_; _∩_; _∪_; never; error; scalar; normalize-<:; normal-∩ⁿ; normal-∩ⁿˢ)
-open import Properties.TypeSaturation using (Overloads; Saturated; _⊆ᵒ_; _<:ᵒ_; normal-saturate; normal-∩-saturate; saturated; <:-saturate; saturate-<:; defn; here; left; right)
+open import Properties.TypeSaturation using (Overloads; Saturated; _⊆ᵒ_; _<:ᵒ_; normal-saturate; normal-∩-saturate; normal-∪-saturate; saturated; <:-saturate; saturate-<:; defn; here; left; right)
 open import Luau.OpSem using (_⟦_⟧_⟶_; _⊢_⟶*_⊣_; _⊢_⟶ᴮ_⊣_; _⊢_⟶ᴱ_⊣_; app₁; app₂; function; beta; return; block; done; local; subst; binOp₀; binOp₁; binOp₂; refl; step; +; -; *; /; <; >; ==; ~=; <=; >=; ··)
 open import Luau.RuntimeError using (BinOpError; RuntimeErrorᴱ; RuntimeErrorᴮ; FunctionMismatch; BinOpMismatch₁; BinOpMismatch₂; UnboundVariable; SEGV; app₁; app₂; bin₁; bin₂; block; local; return; +; -; *; /; <; >; <=; >=; ··)
 open import Luau.RuntimeType using (RuntimeType; valueType; num; str; bool; nil; function)
@@ -155,17 +155,69 @@ Unsafe-overload here W = W
 Unsafe-overload (left o) W = ∩-left (Unsafe-overload o W)
 Unsafe-overload (right o) W = ∩-right (Unsafe-overload o W)
 
+Unsafe-⋒ : ∀ {F G} → (FunType F) → (FunType G) → Unsafe (F ⋒ G) → Unsafe (F ∩ G)
+Unsafe-⋒ (S ⇒ T) (U ⇒ V) (param (∩-left W)) = ∩-left (param W)
+Unsafe-⋒ (S ⇒ T) (U ⇒ V) (param (∩-right W)) = ∩-right (param W)
+Unsafe-⋒ (S ⇒ T) (U ⇒ V) (result (∩-left W)) = ∩-left (result W)
+Unsafe-⋒ (S ⇒ T) (U ⇒ V) (result (∩-right W)) = ∩-right (result W)
+Unsafe-⋒ (S ⇒ T) (G ∩ H) (∩-left W) with Unsafe-⋒ (S ⇒ T) G W
+Unsafe-⋒ (_ ⇒ _) (G ∩ H) (∩-left W) | ∩-left W′ = ∩-left W′
+Unsafe-⋒ (_ ⇒ _) (G ∩ H) (∩-left W) | ∩-right W′ = ∩-right (∩-left W′)
+Unsafe-⋒ (S ⇒ T) (G ∩ H) (∩-right W) with Unsafe-⋒ (S ⇒ T) H W
+Unsafe-⋒ (_ ⇒ _) (G ∩ H) (∩-right W) | ∩-left W′ = ∩-left W′
+Unsafe-⋒ (_ ⇒ _) (G ∩ H) (∩-right W) | ∩-right W′ = ∩-right (∩-right W′)
+Unsafe-⋒ (E ∩ F) (U ⇒ V) (∩-left W) with Unsafe-⋒ E (U ⇒ V) W
+Unsafe-⋒ (E ∩ F) (_ ⇒ _) (∩-left W) | ∩-left W′ = ∩-left (∩-left W′)
+Unsafe-⋒ (E ∩ F) (_ ⇒ _) (∩-left W) | ∩-right W′ = ∩-right W′
+Unsafe-⋒ (E ∩ F) (U ⇒ V) (∩-right W) with Unsafe-⋒ F (U ⇒ V) W
+Unsafe-⋒ (E ∩ F) (_ ⇒ _) (∩-right W) | ∩-left W′ = ∩-left (∩-right W′)
+Unsafe-⋒ (E ∩ F) (_ ⇒ _) (∩-right W) | ∩-right W′ = ∩-right W′
+Unsafe-⋒ (E ∩ F) (G ∩ H) (∩-left W) with Unsafe-⋒ E (G ∩ H) W
+Unsafe-⋒ (E ∩ F) (G ∩ H) (∩-left W) | ∩-left W′ = ∩-left (∩-left W′)
+Unsafe-⋒ (E ∩ F) (G ∩ H) (∩-left W) | ∩-right W′ = ∩-right W′
+Unsafe-⋒ (E ∩ F) (G ∩ H) (∩-right W) with Unsafe-⋒ F (G ∩ H) W
+Unsafe-⋒ (E ∩ F) (G ∩ H) (∩-right W) | ∩-left W′ = ∩-left (∩-right W′)
+Unsafe-⋒ (E ∩ F) (G ∩ H) (∩-right W) | ∩-right W′ = ∩-right W′
+
+Unsafe-⋓ : ∀ {F G} → (FunType F) → (FunType G) → Unsafe (F ⋓ G) → Unsafe (F ∪ G)
+Unsafe-⋓ (S ⇒ T) (U ⇒ V) (param (∪-left W)) = ∪-left (param W)
+Unsafe-⋓ (S ⇒ T) (U ⇒ V) (param (∪-right W)) = ∪-right (param W)
+Unsafe-⋓ (S ⇒ T) (U ⇒ V) (result (∪-left W)) = ∪-left (result W)
+Unsafe-⋓ (S ⇒ T) (U ⇒ V) (result (∪-right W)) = ∪-right (result W)
+Unsafe-⋓ (S ⇒ T) (G ∩ H) (∩-left W) with Unsafe-⋓ (S ⇒ T) G W
+Unsafe-⋓ (_ ⇒ _) (G ∩ H) (∩-left W) | ∪-left W′ = ∪-left W′
+Unsafe-⋓ (_ ⇒ _) (G ∩ H) (∩-left W) | ∪-right W′ = ∪-right (∩-left W′)
+Unsafe-⋓ (S ⇒ T) (G ∩ H) (∩-right W) with Unsafe-⋓ (S ⇒ T) H W
+Unsafe-⋓ (_ ⇒ _) (G ∩ H) (∩-right W) | ∪-left W′ = ∪-left W′
+Unsafe-⋓ (_ ⇒ _) (G ∩ H) (∩-right W) | ∪-right W′ = ∪-right (∩-right W′)
+Unsafe-⋓ (E ∩ F) (U ⇒ V) (∩-left W) with Unsafe-⋓ E (U ⇒ V) W
+Unsafe-⋓ (E ∩ F) (_ ⇒ _) (∩-left W) | ∪-left W′ = ∪-left (∩-left W′)
+Unsafe-⋓ (E ∩ F) (_ ⇒ _) (∩-left W) | ∪-right W′ = ∪-right W′
+Unsafe-⋓ (E ∩ F) (U ⇒ V) (∩-right W) with Unsafe-⋓ F (U ⇒ V) W
+Unsafe-⋓ (E ∩ F) (_ ⇒ _) (∩-right W) | ∪-left W′ = ∪-left (∩-right W′)
+Unsafe-⋓ (E ∩ F) (_ ⇒ _) (∩-right W) | ∪-right W′ = ∪-right W′
+Unsafe-⋓ (E ∩ F) (G ∩ H) (∩-left W) with Unsafe-⋓ E (G ∩ H) W
+Unsafe-⋓ (E ∩ F) (G ∩ H) (∩-left W) | ∪-left W′ = ∪-left (∩-left W′)
+Unsafe-⋓ (E ∩ F) (G ∩ H) (∩-left W) | ∪-right W′ = ∪-right W′
+Unsafe-⋓ (E ∩ F) (G ∩ H) (∩-right W) with Unsafe-⋓ F (G ∩ H) W
+Unsafe-⋓ (E ∩ F) (G ∩ H) (∩-right W) | ∪-left W′ = ∪-left (∩-right W′)
+Unsafe-⋓ (E ∩ F) (G ∩ H) (∩-right W) | ∪-right W′ = ∪-right W′
+
 Unsafe-∩-saturateᶠ : ∀ {F} → (FunType F) → Unsafe (∩-saturate F) → Unsafe F
 Unsafe-∩-saturateᶠ (S ⇒ T) W = W
 Unsafe-∩-saturateᶠ (F ∩ G) (∩-left (∩-left W)) = ∩-left (Unsafe-∩-saturateᶠ F W)
 Unsafe-∩-saturateᶠ (F ∩ G) (∩-left (∩-right W)) = ∩-right (Unsafe-∩-saturateᶠ G W)
-Unsafe-∩-saturateᶠ (F ∩ G) (∩-right W) = {!W!}
+Unsafe-∩-saturateᶠ (F ∩ G) (∩-right W) with Unsafe-⋒ (normal-∩-saturate F) (normal-∩-saturate G) W
+Unsafe-∩-saturateᶠ (F ∩ G) (∩-right W) | ∩-left W′ = ∩-left (Unsafe-∩-saturateᶠ F W′)
+Unsafe-∩-saturateᶠ (F ∩ G) (∩-right W) | ∩-right W′ = ∩-right (Unsafe-∩-saturateᶠ G W′)
 
 Unsafe-∪-saturateᶠ : ∀ {F} → (FunType F) → Unsafe (∪-saturate F) → Unsafe F
 Unsafe-∪-saturateᶠ (S ⇒ T) W = W
 Unsafe-∪-saturateᶠ (F ∩ G) (∩-left (∩-left W)) = ∩-left (Unsafe-∪-saturateᶠ F W)
 Unsafe-∪-saturateᶠ (F ∩ G) (∩-left (∩-right W)) = ∩-right (Unsafe-∪-saturateᶠ G W)
-Unsafe-∪-saturateᶠ (F ∩ G) (∩-right W) = {!!}
+Unsafe-∪-saturateᶠ (F ∩ G) (∩-right W) with Unsafe-⋓ (normal-∪-saturate F) (normal-∪-saturate G) W
+Unsafe-∪-saturateᶠ (F ∩ G) (∩-right W) | ∪-left W′ = ∩-left (Unsafe-∪-saturateᶠ F W′)
+Unsafe-∪-saturateᶠ (F ∩ G) (∩-right W) | ∪-right W′ = ∩-right (Unsafe-∪-saturateᶠ G W′)
 
 Unsafe-saturateᶠ : ∀ {F} → (FunType F) → Unsafe (saturate F) → Unsafe F
 Unsafe-saturateᶠ F W = Unsafe-∩-saturateᶠ F (Unsafe-∪-saturateᶠ (normal-∩-saturate F) W)
