@@ -223,17 +223,22 @@ Unsafe-saturateᶠ : ∀ {F} → (FunType F) → Unsafe (saturate F) → Unsafe 
 Unsafe-saturateᶠ F W = Unsafe-∩-saturateᶠ F (Unsafe-∪-saturateᶠ (normal-∩-saturate F) W)
 
 Unsafe-∪ᶠ : ∀ {F G} → (FunType F) → (FunType G) → Unsafe (F ∪ᶠ G) → Unsafe (F ∪ G)
--- Unsafe-∪ᶠ (S ⇒ T) (U ⇒ V) (param (intersect W _)) = left (param W)
+Unsafe-∪ᶠ (S ⇒ T) (U ⇒ V) (param (∩-left W)) = ∪-left (param W)
+Unsafe-∪ᶠ (S ⇒ T) (U ⇒ V) (param (∩-right W)) = ∪-right (param W)
 Unsafe-∪ᶠ (S ⇒ T) (U ⇒ V) (result (∪-left W)) = ∪-left (result W)
 Unsafe-∪ᶠ (S ⇒ T) (U ⇒ V) (result (∪-right W)) = ∪-right (result W)
--- Unsafe-∪ᶠ (S ⇒ T) (G ∩ H) (intersect W₁ W₂) with Unsafe-∪ᶠ (S ⇒ T) G W₁ | Unsafe-∪ᶠ (S ⇒ T) H W₂
--- Unsafe-∪ᶠ (_ ⇒ _) (G ∩ H) (intersect W₁ W₂) | left W₃ | _ = left W₃
--- Unsafe-∪ᶠ (_ ⇒ _) (G ∩ H) (intersect W₁ W₂) | _ | left W₄ = left W₄
--- Unsafe-∪ᶠ (_ ⇒ _) (G ∩ H) (intersect W₁ W₂) | right W₃ | right W₄ = right (intersect W₃ W₄)
--- Unsafe-∪ᶠ (E ∩ F) G (intersect W₁ W₂) with Unsafe-∪ᶠ E G W₁ | Unsafe-∪ᶠ F G W₂ 
--- Unsafe-∪ᶠ (E ∩ F) G (intersect W₁ W₂) | left W₃ | left W₄ = left (intersect W₃ W₄)
--- Unsafe-∪ᶠ (E ∩ F) G (intersect W₁ W₂) | right W₃ | _ = right W₃
--- Unsafe-∪ᶠ (E ∩ F) G (intersect W₁ W₂) | _ | right W₄ = right W₄
+Unsafe-∪ᶠ (S ⇒ T) (G ∩ H) (∩-left W) with Unsafe-∪ᶠ (S ⇒ T) G W
+Unsafe-∪ᶠ (S ⇒ T) (G ∩ H) (∩-left W) | ∪-left W′ = ∪-left W′
+Unsafe-∪ᶠ (S ⇒ T) (G ∩ H) (∩-left W) | ∪-right W′ = ∪-right (∩-left W′)
+Unsafe-∪ᶠ (S ⇒ T) (G ∩ H) (∩-right W) with Unsafe-∪ᶠ (S ⇒ T) H W
+Unsafe-∪ᶠ (S ⇒ T) (G ∩ H) (∩-right W) | ∪-left W′ = ∪-left W′
+Unsafe-∪ᶠ (S ⇒ T) (G ∩ H) (∩-right W) | ∪-right W′ = ∪-right (∩-right W′)
+Unsafe-∪ᶠ (E ∩ F) G (∩-left W) with Unsafe-∪ᶠ E G W
+Unsafe-∪ᶠ (E ∩ F) G (∩-left W) | ∪-left W′ = ∪-left (∩-left W′)
+Unsafe-∪ᶠ (E ∩ F) G (∩-left W) | ∪-right W′ = ∪-right W′
+Unsafe-∪ᶠ (E ∩ F) G (∩-right W) with Unsafe-∪ᶠ F G W
+Unsafe-∪ᶠ (E ∩ F) G (∩-right W) | ∪-left W′ = ∪-left (∩-right W′)
+Unsafe-∪ᶠ (E ∩ F) G (∩-right W) | ∪-right W′ = ∪-right W′
 
 Unsafe-∪ⁿ : ∀ {T U} → (Normal T) → (Normal U) → Unsafe (T ∪ⁿ U) → Unsafe (T ∪ U)
 Unsafe-∪ⁿ (S ⇒ T) (U ⇒ V) W = Unsafe-∪ᶠ (S ⇒ T) (U ⇒ V) W
@@ -269,30 +274,35 @@ Unsafe-∪ⁿˢ (S ∪ scalar T) (scalar U) (∪-left W) | no p with Unsafe-∪�
 Unsafe-∪ⁿˢ (S ∪ scalar _) (scalar _) (∪-left W) | no p | ∪-left W′ = ∪-left (∪-left W′)
 
 Unsafe-∩ⁿˢ : ∀ {T U} → (Normal T) → (ErrScalar U) → Unsafe (T ∩ⁿˢ U) → Unsafe (T ∩ U)
-Unsafe-∩ⁿˢ (S ∪ error) error W = ∩-right W -- intersect (right W) W
--- Unsafe-∩ⁿˢ (S ∪ scalar T) error W with Unsafe-∩ⁿˢ S error W
--- Unsafe-∩ⁿˢ (S ∪ scalar T) error W | intersect W₁ W₂ = intersect (left W₁) W₂
--- Unsafe-∩ⁿˢ (S ∪ error) (scalar U) W with Unsafe-∩ⁿˢ S (scalar U) W
--- Unsafe-∩ⁿˢ (S ∪ error) (scalar U) W | intersect W₁ W₂ = intersect (left W₁) W₂
--- Unsafe-∩ⁿˢ (S ∪ scalar T) (scalar U) W with T ≡ˢ U
--- Unsafe-∩ⁿˢ (S ∪ scalar T) (scalar T) W | yes refl = intersect (right W) W
--- Unsafe-∩ⁿˢ (S ∪ scalar T) (scalar U) W | no p with Unsafe-∩ⁿˢ S (scalar U) W
--- Unsafe-∩ⁿˢ (S ∪ scalar T) (scalar U) W | no p | intersect W₁ W₂ = intersect (left W₁) W₂
+Unsafe-∩ⁿˢ (S ∪ error) error W = ∩-right W
+Unsafe-∩ⁿˢ (S ∪ scalar T) error W with Unsafe-∩ⁿˢ S error W
+Unsafe-∩ⁿˢ (S ∪ scalar _) error W | ∩-left W′ = ∩-left (∪-left W′)
+Unsafe-∩ⁿˢ (S ∪ scalar _) error W | ∩-right W′ = ∩-right W′
+Unsafe-∩ⁿˢ (S ∪ error) (scalar U) W with Unsafe-∩ⁿˢ S (scalar U) W
+Unsafe-∩ⁿˢ (S ∪ error) (scalar _) W | ∩-left W′ = ∩-left (∪-left W′)
+Unsafe-∩ⁿˢ (S ∪ scalar T) (scalar U) W with T ≡ˢ U
+Unsafe-∩ⁿˢ (S ∪ scalar T) (scalar T) W | yes refl = ∩-right W
+Unsafe-∩ⁿˢ (S ∪ scalar T) (scalar U) W | no p with Unsafe-∩ⁿˢ S (scalar U) W
+Unsafe-∩ⁿˢ (S ∪ scalar _) (scalar _) W | no p | ∩-left W′ = ∩-left (∪-left W′)
 
 Unsafe-∩ⁿ : ∀ {T U} → (Normal T) → (Normal U) → Unsafe (T ∩ⁿ U) → Unsafe (T ∩ U)
 Unsafe-∩ⁿ (S ⇒ T) (U ⇒ V) W = W
 Unsafe-∩ⁿ (S ∩ T) (U ⇒ V) W = W
--- Unsafe-∩ⁿ (S ∪ T) (U ⇒ V) W with Unsafe-∩ⁿ S (U ⇒ V) W 
--- Unsafe-∩ⁿ (S ∪ T) (U ⇒ V) W | intersect W₁ W₂ = intersect (left W₁) W₂
+Unsafe-∩ⁿ (S ∪ T) (U ⇒ V) W with Unsafe-∩ⁿ S (U ⇒ V) W 
+Unsafe-∩ⁿ (S ∪ T) (_ ⇒ _) W | ∩-left W′ = ∩-left (∪-left W′)
+Unsafe-∩ⁿ (S ∪ T) (_ ⇒ _) W | ∩-right W′ = ∩-right W′
 Unsafe-∩ⁿ (S ⇒ T) (U ∩ V) W = W
 Unsafe-∩ⁿ (S ∩ T) (U ∩ V) W = W
--- Unsafe-∩ⁿ (S ∪ T) (U ∩ V) W with Unsafe-∩ⁿ S (U ∩ V) W
--- Unsafe-∩ⁿ (S ∪ T) (U ∩ V) W | intersect W₁ W₂ = intersect (left W₁) W₂
--- Unsafe-∩ⁿ T (U ∪ V) W with Unsafe-∪ⁿˢ (normal-∩ⁿ T U) (normal-∩ⁿˢ T V) W
--- Unsafe-∩ⁿ T (U ∪ V) W | left W′ with Unsafe-∩ⁿ T U W′
--- Unsafe-∩ⁿ T (U ∪ V) W | left W′ | intersect W₁ W₂ = intersect W₁ (left W₂)
--- Unsafe-∩ⁿ T (U ∪ V) W | right W′ with Unsafe-∩ⁿˢ T V W′
--- Unsafe-∩ⁿ T (U ∪ V) W | right W′ | intersect W₁ W₂ = intersect W₁ (right W₂)
+Unsafe-∩ⁿ (S ∪ T) (U ∩ V) W with Unsafe-∩ⁿ S (U ∩ V) W
+Unsafe-∩ⁿ (S ∪ T) (U ∩ V) W | ∩-left W′ = ∩-left (∪-left W′)
+Unsafe-∩ⁿ (S ∪ T) (U ∩ V) W | ∩-right W′ = ∩-right W′
+Unsafe-∩ⁿ T (U ∪ V) W with Unsafe-∪ⁿˢ (normal-∩ⁿ T U) (normal-∩ⁿˢ T V) W
+Unsafe-∩ⁿ T (U ∪ V) W | ∪-left W′ with Unsafe-∩ⁿ T U W′
+Unsafe-∩ⁿ T (U ∪ V) W | ∪-left W′ | ∩-left W″ = ∩-left W″
+Unsafe-∩ⁿ T (U ∪ V) W | ∪-left W′ | ∩-right W″ = ∩-right (∪-left W″)
+Unsafe-∩ⁿ T (U ∪ V) W | ∪-right W′ with Unsafe-∩ⁿˢ T V W′
+Unsafe-∩ⁿ T (U ∪ V) W | ∪-right W′ | ∩-left W″ = ∩-left W″
+Unsafe-∩ⁿ T (U ∪ V) W | ∪-right W′ | ∩-right W″ = ∩-right (∪-right W″)
 Unsafe-∩ⁿ T never ()
 
 Unsafe-normalize : ∀ T → Unsafe (normalize T) → Unsafe T
@@ -302,10 +312,11 @@ Unsafe-normalize (S ⇒ T) W = W
 Unsafe-normalize any W = any
 Unsafe-normalize error W = error
 Unsafe-normalize (T ∪ U) W with Unsafe-∪ⁿ (normal T) (normal U) W
-Unsafe-normalize (T ∪ U) W | ∪-left W₁ = ∪-left (Unsafe-normalize T W₁)
-Unsafe-normalize (T ∪ U) W | ∪-right W₂ = ∪-right (Unsafe-normalize U W₂)
--- Unsafe-normalize (T ∩ U) W with Unsafe-∩ⁿ (normal T) (normal U) W
--- Unsafe-normalize (T ∩ U) W | intersect W₁ W₂ = intersect (Unsafe-normalize T W₁) (Unsafe-normalize U W₂)
+Unsafe-normalize (T ∪ U) W | ∪-left W′ = ∪-left (Unsafe-normalize T W′)
+Unsafe-normalize (T ∪ U) W | ∪-right W′ = ∪-right (Unsafe-normalize U W′)
+Unsafe-normalize (T ∩ U) W with Unsafe-∩ⁿ (normal T) (normal U) W
+Unsafe-normalize (T ∩ U) W | ∩-left W′ = ∩-left (Unsafe-normalize T W′)
+Unsafe-normalize (T ∩ U) W | ∩-right W′ = ∩-right (Unsafe-normalize U W′)
 
 Unsafe-resolvedˢ : ∀ {F} → (Fᶠ : FunType F) → (Fˢ : Saturated F) → (V : Type) → (FoundSrcOverload F) → (R : Resolved F V) → Unsafe(target R) → Either (V ≮: srcⁿ F) (Unsafe F)
 Unsafe-resolvedˢ Fᶠ Fˢ V (found S T o p) R W  with dec-subtyping V S
