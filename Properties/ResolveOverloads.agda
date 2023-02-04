@@ -11,7 +11,7 @@ open import Luau.TypeNormalization using (normalize)
 open import Properties.Contradiction using (CONTRADICTION)
 open import Properties.DecSubtyping using (dec-subtyping; dec-subtypingⁿ; <:-impl-<:ᵒ)
 open import Properties.Functions using (_∘_)
-open import Properties.Subtyping using (<:-refl; <:-trans; <:-trans-≮:; ≮:-trans-<:; <:-∩-left; <:-∩-right; <:-∩-glb; <:-impl-¬≮:; <:-any; <:-function; function-≮:-never; <:-never; any-≮:-function; scalar-≮:-function; ≮:-∪-right; scalar-≮:-never; error-≮:-never; <:-∪-left; <:-∪-right; <:-impl-⊇; language-comp)
+open import Properties.Subtyping using (<:-refl; <:-trans; <:-trans-≮:; ≮:-trans-<:; <:-∩-left; <:-∩-right; <:-∩-glb; <:-impl-¬≮:; <:-any; <:-function; function-≮:-never; <:-never; any-≮:-function; scalar-≮:-function; ≮:-∪-right; scalar-≮:-never; error-≮:-never; <:-∪-left; <:-∪-right; <:-∪-lub; <:-function-left; <:-impl-⊇; language-comp; dec-language)
 open import Properties.TypeNormalization using (Normal; FunType; normal; _⇒_; _∩_; _∪_; never; scalar; error; <:-normalize; normalize-<:; fun-≮:-never; scalar-≮:-fun; error-≮:-fun)
 open import Properties.TypeSaturation using (Overloads; Saturated; _⊆ᵒ_; _<:ᵒ_; normal-saturate; saturated; <:-saturate; saturate-<:; defn; here; left; right)
 
@@ -52,6 +52,11 @@ src-¬function-err {T = S ⇒ T} (function-warning p) = p
 src-¬function-err {T = any} p = never
 src-¬function-err {T = S ∪ T} p = src-¬function-errⁿ (normal (S ∪ T)) (<:-normalize (S ∪ T) p)
 src-¬function-err {T = S ∩ T} p = src-¬function-errⁿ (normal (S ∩ T)) (<:-normalize (S ∩ T) p)
+
+src-function-errᶠ : ∀ {F t} → (FunType F) → ¬Language F ⟨ warning t ⟩ → (Language (srcⁿ F) t)
+src-function-errᶠ {F} {t} Fᶠ p with dec-language (srcⁿ F) t
+src-function-errᶠ {F} {t} Fᶠ p | Left q = CONTRADICTION (language-comp p (function-err-srcⁿ Fᶠ q))
+src-function-errᶠ {F} {t} Fᶠ p | Right q = q
 
 fun-¬scalar : ∀ {T} s → FunType T → ¬Language T ⟨ scalar s ⟩
 fun-¬scalar s (S ⇒ T) = function-scalar s
@@ -118,8 +123,9 @@ any-src-≮: _ p (witness q function-error) = CONTRADICTION (language-comp ((((f
                                                                              , scalar-error NIL)
                                                                             , scalar-error BOOLEAN) (p q))
 
+-- src is contravariant
 <:-srcᶠ : ∀ {F G} → (Fᶠ : FunType F) → (Gᶠ : FunType G) → F <: G → srcⁿ G <: srcⁿ F
-<:-srcᶠ = {!!}
+<:-srcᶠ F G p q = src-function-errᶠ F (<:-impl-⊇ p (¬function-err-srcᶠ G q))
 
 <:-srcⁿ : ∀ {T U} → (Tⁿ : Normal T) → (Uⁿ : Normal U) → T <: U → srcⁿ U <: srcⁿ T
 <:-srcⁿ T (U ∪ V) p = <:-never

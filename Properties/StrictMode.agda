@@ -27,7 +27,7 @@ open import Properties.Contradiction using (CONTRADICTION; ¬)
 open import Properties.Functions using (_∘_)
 open import Properties.DecSubtyping using (dec-subtyping)
 open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; scalar-<:-unknown; function-<:-unknown; any-≮:-scalar; scalar-≮:-never; any-≮:-never; <:-refl; <:-any; <:-impl-¬≮:; <:-never; <:-∪-lub; <:-∩-left; <:-∩-right; <:-∪-left; <:-∪-right)
-open import Properties.ResolveOverloads using (src-any-≮:; any-src-≮:; <:-resolve; resolve-<:-⇒; <:-resolve-⇒)
+open import Properties.ResolveOverloads using (src-any-≮:; any-src-≮:; <:-src; <:-srcᶠ; <:-resolve; resolve-<:-⇒; <:-resolve-⇒)
 open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; <:-trans-≮:; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; any-≮:-scalar; scalar-≮:-never; any-≮:-never; ≡-impl-<:; ≡-trans-<:; <:-trans-≡; ≮:-trans-<:; <:-trans)
 open import Properties.TypeCheck using (typeOfᴼ; typeOfᴹᴼ; typeOfⱽ; typeOfᴱ; typeOfᴮ; typeCheckᴱ; typeCheckᴮ; typeCheckᴼ; typeCheckᴴ)
 open import Properties.TypeNormalization using (normal; Normal; FunType; ErrScalar; OptScalar; _⇒_; _∩_; _∪_; never; error; scalar; normalize-<:; normal-∩ⁿ; normal-∩ⁿˢ)
@@ -325,7 +325,7 @@ Unsafe-resolveˢ : ∀ {F} → (Fᶠ : FunType F) → (Fˢ : Saturated F) → (V
 Unsafe-resolveˢ Fᶠ Fˢ V W = Unsafe-resolvedˢ Fᶠ Fˢ V (findSrcOverload Fᶠ Fˢ (λ o → o)) (resolveToˢ Fᶠ Fˢ V (λ o → o)) W
 
 Unsafe-resolveᶠ : ∀ {F} → (Fᶠ : FunType F) → ∀ V → Unsafe(resolveᶠ Fᶠ V) → Either (V ≮: srcⁿ F) (Unsafe F)
-Unsafe-resolveᶠ Fᶠ V W = mapLR (λ p → ≮:-trans-<: p (<:-src (normal-saturate Fᶠ) Fᶠ (saturate-<: Fᶠ))) (Unsafe-saturateᶠ Fᶠ) (Unsafe-resolveˢ (normal-saturate Fᶠ) (saturated Fᶠ) V W)
+Unsafe-resolveᶠ Fᶠ V W = mapLR (λ p → ≮:-trans-<: p (<:-srcᶠ (normal-saturate Fᶠ) Fᶠ (saturate-<: Fᶠ))) (Unsafe-saturateᶠ Fᶠ) (Unsafe-resolveˢ (normal-saturate Fᶠ) (saturated Fᶠ) V W)
 
 Unsafe-resolveⁿ : ∀ {F} → (Fⁿ : Normal F) → ∀ V → Unsafe(resolveⁿ Fⁿ V) → Either (F ≮: funktion) (Either (V ≮: srcⁿ F) (Unsafe F))
 Unsafe-resolveⁿ (T ⇒ U) V W = Right (Unsafe-resolveᶠ (T ⇒ U) V W)
