@@ -82,12 +82,14 @@ data Warningᴱ H {Γ} where
 
   BinOpMismatch₁ : ∀ {op M N T U} {D₁ : Γ ⊢ᴱ M ∈ T} {D₂ : Γ ⊢ᴱ N ∈ U} →
 
+    (error ≮: T) → -- error suppression
     (T ≮: srcBinOp op) →
     ------------------------------
     Warningᴱ H (binexp {op} D₁ D₂)
 
   BinOpMismatch₂ : ∀ {op M N T U} {D₁ : Γ ⊢ᴱ M ∈ T} {D₂ : Γ ⊢ᴱ N ∈ U} →
 
+    (error ≮: U) → -- error suppression
     (U ≮: srcBinOp op) →
     ------------------------------
     Warningᴱ H (binexp {op} D₁ D₂)

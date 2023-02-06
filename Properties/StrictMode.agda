@@ -26,7 +26,7 @@ open import Properties.Dec using (Dec; yes; no)
 open import Properties.Contradiction using (CONTRADICTION; ¬)
 open import Properties.Functions using (_∘_)
 open import Properties.DecSubtyping using (dec-subtyping)
-open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; error-≮:-never; scalar-<:-unknown; function-<:-unknown; any-≮:-scalar; scalar-≮:-never; any-≮:-never; <:-refl; <:-any; <:-impl-¬≮:; <:-never; <:-∪-lub; <:-∩-left; <:-∩-right; <:-∪-left; <:-∪-right)
+open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; error-≮:-never; error-≮:-function; scalar-<:-unknown; function-<:-unknown; any-≮:-scalar; scalar-≮:-never; any-≮:-never; <:-refl; <:-any; <:-impl-¬≮:; <:-never; <:-∪-lub; <:-∩-left; <:-∩-right; <:-∪-left; <:-∪-right)
 open import Properties.ResolveOverloads using (src-any-≮:; any-src-≮:; <:-src; <:-srcᶠ; <:-resolve; resolve-<:-⇒; <:-resolve-⇒)
 open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; <:-trans-≮:; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; any-≮:-scalar; scalar-≮:-never; any-≮:-never; error-≮:-scalar; ≡-impl-<:; ≡-trans-<:; <:-trans-≡; ≮:-trans-<:; <:-trans)
 open import Properties.TypeCheck using (typeOfᴼ; typeOfᴹᴼ; typeOfⱽ; typeOfᴱ; typeOfᴮ; typeCheckᴱ; typeCheckᴮ; typeCheckᴼ; typeCheckᴴ)
@@ -537,8 +537,12 @@ reflect-substitutionᴱ H (function f ⟨ var y ∈ T ⟩∈ U is B end) v x (fu
 reflect-substitutionᴱ H (block var b ∈ T is B end) v x (BlockMismatch q) = mapLR (expr ∘ BlockMismatch) Right (≮:-substitutivityᴮ H B v x q)
 reflect-substitutionᴱ H (block var b ∈ T is B end) v x (UnsafeBlock W′) = Left (expr (UnsafeBlock W′))
 reflect-substitutionᴱ H (block var b ∈ T is B end) v x (block₁ W′) = mapL (mapᴮᴱ+ block₁) (reflect-substitutionᴮ H B v x W′)
-reflect-substitutionᴱ H (binexp M op N) v x (BinOpMismatch₁ q) = mapLR (expr ∘ BinOpMismatch₁) Right (≮:-substitutivityᴱ H M v x q)
-reflect-substitutionᴱ H (binexp M op N) v x (BinOpMismatch₂ q) = mapLR (expr ∘ BinOpMismatch₂) Right (≮:-substitutivityᴱ H N v x q)
+reflect-substitutionᴱ {Γ} {T} H (binexp M op N) v x (BinOpMismatch₁ _ q) with dec-Unsafe (typeOfᴱ H (Γ ⊕ x ↦ T) M)
+reflect-substitutionᴱ {Γ} {T} H (binexp M op N) v x (BinOpMismatch₁ _ q) | Left W = Left (mapᴱ+ bin₁ (Unsafe-impl-Warningᴱ H (Γ ⊕ x ↦ T) M W))
+reflect-substitutionᴱ H (binexp M op N) v x (BinOpMismatch₁ _ q) | Right ¬W = mapLR (expr ∘ BinOpMismatch₁ (≮:-error ¬W)) Right (≮:-substitutivityᴱ H M v x q)
+reflect-substitutionᴱ {Γ} {T} H (binexp M op N) v x (BinOpMismatch₂ _ q) with dec-Unsafe (typeOfᴱ H (Γ ⊕ x ↦ T) N)
+reflect-substitutionᴱ {Γ} {T} H (binexp M op N) v x (BinOpMismatch₂ _ q) | Left W = Left (mapᴱ+ bin₂ (Unsafe-impl-Warningᴱ H (Γ ⊕ x ↦ T) N W))
+reflect-substitutionᴱ H (binexp M op N) v x (BinOpMismatch₂ _ q) | Right ¬W = mapLR (expr ∘ BinOpMismatch₂ (≮:-error ¬W)) Right (≮:-substitutivityᴱ H N v x q)
 reflect-substitutionᴱ H (binexp M op N) v x (bin₁ W) = mapL (mapᴱ+ bin₁) (reflect-substitutionᴱ H M v x W)
 reflect-substitutionᴱ H (binexp M op N) v x (bin₂ W) = mapL (mapᴱ+ bin₂) (reflect-substitutionᴱ H N v x W)
 
@@ -590,10 +594,13 @@ reflect-weakeningᴱ Γ H (M $ N) h (NotFunctionCall M✓ p) | Right q | Right r
 reflect-weakeningᴱ Γ H (M $ N) h (FunctionCallMismatch M✓ N✓ p) | Right q | Right r = FunctionCallMismatch (≮:-trans-≡ M✓ q) (≮:-trans-≡ N✓ r) (≡-trans-≮: (sym r) (≮:-trans-≡ p (cong src q)))
 reflect-weakeningᴱ Γ H (M $ N) h (app₁ W′) | Right q | Right r = app₁ (reflect-weakeningᴱ Γ H M h W′)
 reflect-weakeningᴱ Γ H (M $ N) h (app₂ W′) | Right q | Right r = app₂ (reflect-weakeningᴱ Γ H N h W′)
-reflect-weakeningᴱ Γ H (binexp M op N) h (BinOpMismatch₁ p) = BinOpMismatch₁ (≮:-heap-weakeningᴱ Γ H M h p)
-reflect-weakeningᴱ Γ H (binexp M op N) h (BinOpMismatch₂ p) = BinOpMismatch₂ (≮:-heap-weakeningᴱ Γ H N h p)
-reflect-weakeningᴱ Γ H (binexp M op N) h (bin₁ W′) = bin₁ (reflect-weakeningᴱ Γ H M h W′)
-reflect-weakeningᴱ Γ H (binexp M op N) h (bin₂ W′) = bin₂ (reflect-weakeningᴱ Γ H N h W′)
+reflect-weakeningᴱ Γ H (binexp M op N) h W′ with ≡-heap-weakeningᴱ Γ H M h | ≡-heap-weakeningᴱ Γ H N h
+reflect-weakeningᴱ Γ H (binexp M op N) h W′ | Left W | _ = bin₁ W
+reflect-weakeningᴱ Γ H (binexp M op N) h W′ | _ | Left W = bin₂ W
+reflect-weakeningᴱ Γ H (binexp M op N) h (BinOpMismatch₁ M✓ p) | Right q | Right r = BinOpMismatch₁ (≮:-trans-≡ M✓ q) (≮:-heap-weakeningᴱ Γ H M h p)
+reflect-weakeningᴱ Γ H (binexp M op N) h (BinOpMismatch₂ N✓ p) | Right q | Right r = BinOpMismatch₂ (≮:-trans-≡ N✓ r) (≮:-heap-weakeningᴱ Γ H N h p)
+reflect-weakeningᴱ Γ H (binexp M op N) h (bin₁ W′) | Right q | Right r = bin₁ (reflect-weakeningᴱ Γ H M h W′)
+reflect-weakeningᴱ Γ H (binexp M op N) h (bin₂ W′) | Right q | Right r = bin₂ (reflect-weakeningᴱ Γ H N h W′)
 reflect-weakeningᴱ Γ H (function f ⟨ var y ∈ T ⟩∈ U is B end) h (FunctionDefnMismatch p) = FunctionDefnMismatch (≮:-heap-weakeningᴮ (Γ ⊕ y ↦ T) H B h p)
 reflect-weakeningᴱ Γ H (function f ⟨ var y ∈ T ⟩∈ U is B end) h (UnsafeFunction W) = UnsafeFunction W
 reflect-weakeningᴱ Γ H (function f ⟨ var y ∈ T ⟩∈ U is B end) h (function₁ W) = function₁ (reflect-weakeningᴮ (Γ ⊕ y ↦ T) H B h W)
@@ -649,15 +656,18 @@ reflectᴱ H (block var b ∈ T is B end) (block s) (UnsafeBlock p) = expr (Unsa
 reflectᴱ H (block var b ∈ T is B end) (block s) (block₁ W′) = mapᴮᴱ+ block₁ (reflectᴮ H B s W′)
 reflectᴱ H (block var b ∈ T is B end) (return v) W′ = expr (block₁ (return W′))
 reflectᴱ H (function f ⟨ var x ∈ T ⟩∈ U is B end) (function a defn) (UnallocatedAddress ())
-reflectᴱ H (binexp M op N) (binOp₀ ()) (UnallocatedAddress p)
-reflectᴱ H (binexp M op N) (binOp₁ s) (BinOpMismatch₁ p) = cond (expr ∘ BinOpMismatch₁) (mapᴱ+ bin₁) (≮:-reductionᴱ H M s p)
-reflectᴱ H (binexp M op N) (binOp₁ s) (BinOpMismatch₂ p) = expr (BinOpMismatch₂ (≮:-heap-weakeningᴱ ∅ H N (rednᴱ⊑ s) p))
-reflectᴱ H (binexp M op N) (binOp₁ s) (bin₁ W′) = mapᴱ+ bin₁ (reflectᴱ H M s W′)
-reflectᴱ H (binexp M op N) (binOp₁ s) (bin₂ W′) = expr (bin₂ (reflect-weakeningᴱ ∅ H N (rednᴱ⊑ s) W′))
-reflectᴱ H (binexp M op N) (binOp₂ s) (BinOpMismatch₁ p) = expr (BinOpMismatch₁ (≮:-heap-weakeningᴱ ∅ H M (rednᴱ⊑ s) p))
-reflectᴱ H (binexp M op N) (binOp₂ s) (BinOpMismatch₂ p) = cond (expr ∘ BinOpMismatch₂) (mapᴱ+ bin₂) (≮:-reductionᴱ H N s p)
-reflectᴱ H (binexp M op N) (binOp₂ s) (bin₁ W′) = expr (bin₁ (reflect-weakeningᴱ ∅ H M (rednᴱ⊑ s) W′))
-reflectᴱ H (binexp M op N) (binOp₂ s) (bin₂ W′) = mapᴱ+ bin₂ (reflectᴱ H N s W′)
+reflectᴱ H (binexp M op N) s W′ with dec-Unsafe (typeOfᴱ H ∅ M) | dec-Unsafe (typeOfᴱ H ∅ N)
+reflectᴱ H (binexp M op N) s W′ | Left W | _ = mapᴱ+ bin₁ (Unsafe-impl-Warningᴱ H ∅ M W)
+reflectᴱ H (binexp M op N) s W′ | _ | Left W = mapᴱ+ bin₂ (Unsafe-impl-Warningᴱ H ∅ N W)
+reflectᴱ H (binexp M op N) (binOp₀ ()) (UnallocatedAddress p) | Right ¬W | Right ¬V 
+reflectᴱ H (binexp M op N) (binOp₁ s) (BinOpMismatch₁ M✓ p) | Right ¬W | Right ¬V  = cond (expr ∘ BinOpMismatch₁ (≮:-error ¬W)) (mapᴱ+ bin₁) (≮:-reductionᴱ H M s p)
+reflectᴱ H (binexp M op N) (binOp₁ s) (BinOpMismatch₂ N✓ p) | Right ¬W | Right ¬V  = expr (BinOpMismatch₂ (≮:-error ¬V) (≮:-heap-weakeningᴱ ∅ H N (rednᴱ⊑ s) p))
+reflectᴱ H (binexp M op N) (binOp₁ s) (bin₁ W′) | Right ¬W | Right ¬V  = mapᴱ+ bin₁ (reflectᴱ H M s W′)
+reflectᴱ H (binexp M op N) (binOp₁ s) (bin₂ W′) | Right ¬W | Right ¬V  = expr (bin₂ (reflect-weakeningᴱ ∅ H N (rednᴱ⊑ s) W′))
+reflectᴱ H (binexp M op N) (binOp₂ s) (BinOpMismatch₁ M✓ p) | Right ¬W | Right ¬V  = expr (BinOpMismatch₁ (≮:-error ¬W) (≮:-heap-weakeningᴱ ∅ H M (rednᴱ⊑ s) p))
+reflectᴱ H (binexp M op N) (binOp₂ s) (BinOpMismatch₂ N✓ p) | Right ¬W | Right ¬V  = cond (expr ∘ BinOpMismatch₂ (≮:-error ¬V)) (mapᴱ+ bin₂) (≮:-reductionᴱ H N s p)
+reflectᴱ H (binexp M op N) (binOp₂ s) (bin₁ W′) | Right ¬W | Right ¬V  = expr (bin₁ (reflect-weakeningᴱ ∅ H M (rednᴱ⊑ s) W′))
+reflectᴱ H (binexp M op N) (binOp₂ s) (bin₂ W′) | Right ¬W | Right ¬V  = mapᴱ+ bin₂ (reflectᴱ H N s W′)
 
 reflectᴮ H (local var x ∈ T ← M ∙ B) (local s) (LocalVarMismatch p) = cond (block ∘ LocalVarMismatch) (mapᴱᴮ+ local₁) (≮:-reductionᴱ H M s p)
 reflectᴮ H (local var x ∈ T ← M ∙ B) (local s) (local₁ W′) = mapᴱᴮ+ local₁ (reflectᴱ H M s W′)
@@ -745,13 +755,6 @@ isntFunction H (num x) p = scalar-≮:-function NUMBER
 isntFunction H (bool x) p = scalar-≮:-function BOOLEAN
 isntFunction H (str x) p = scalar-≮:-function STRING
 
-isntError : ∀ H v → (valueType v ≢ function) → (error ≮: typeOfᴱ H ∅ (val v))
-isntError H nil p = error-≮:-scalar NIL
-isntError H (addr a) p = CONTRADICTION (p refl)
-isntError H (num x) p = error-≮:-scalar NUMBER
-isntError H (bool x) p = error-≮:-scalar BOOLEAN
-isntError H (str x) p = error-≮:-scalar STRING
-
 isntEmpty : ∀ H v → (typeOfᴱ H ∅ (val v) ≮: never)
 isntEmpty H nil = scalar-≮:-never NIL
 isntEmpty H (addr a) with remember (H [ a ]ᴴ)
@@ -760,6 +763,15 @@ isntEmpty H (addr a) | (nothing , p) = ≡-trans-≮: (cong orAny (cong typeOf�
 isntEmpty H (num x) = scalar-≮:-never NUMBER
 isntEmpty H (bool x) = scalar-≮:-never BOOLEAN
 isntEmpty H (str x) = scalar-≮:-never STRING
+
+isntError : ∀ H v → Either (Warningᴱ H (typeCheckᴱ H ∅ (val v))) (error ≮: typeOfᴱ H ∅ (val v))
+isntError H nil = Right (error-≮:-scalar NIL)
+isntError H (addr a) with remember (H [ a ]ᴴ)
+isntError H (addr a) | (nothing , q) = Left (UnallocatedAddress q)
+isntError H (addr a) | (just (function f ⟨ var x ∈ T ⟩∈ U is B end) , q) = Right (≮:-trans-≡ error-≮:-function (cong orAny (cong typeOfᴹᴼ (sym q))))
+isntError H (num x) = Right (error-≮:-scalar NUMBER)
+isntError H (bool x) = Right (error-≮:-scalar BOOLEAN)
+isntError H (str x) = Right (error-≮:-scalar STRING)
 
 runtimeBinOpWarning : ∀ H {op} v → BinOpError op (valueType v) → (typeOfᴱ H ∅ (val v) ≮: srcBinOp op)
 runtimeBinOpWarning H v (+ p) = isntNumber H v p
@@ -777,12 +789,18 @@ runtimeWarningᴮ : ∀ H B → RuntimeErrorᴮ H B → Warningᴮ H (typeCheck�
 
 runtimeWarningᴱ H (var x) UnboundVariable = UnboundVariable refl
 runtimeWarningᴱ H (val (addr a)) (SEGV p) = UnallocatedAddress p
-runtimeWarningᴱ H (M $ N) (FunctionMismatch v w p) = NotFunctionCall (isntError H v p) (isntFunction H v p)
+runtimeWarningᴱ H (M $ N) (FunctionMismatch v w p) with isntError H v
+runtimeWarningᴱ H (M $ N) (FunctionMismatch v w p) | Left W = app₁ W
+runtimeWarningᴱ H (M $ N) (FunctionMismatch v w p) | Right r = NotFunctionCall r (isntFunction H v p)
 runtimeWarningᴱ H (M $ N) (app₁ err) = app₁ (runtimeWarningᴱ H M err)
 runtimeWarningᴱ H (M $ N) (app₂ err) = app₂ (runtimeWarningᴱ H N err)
 runtimeWarningᴱ H (block var b ∈ T is B end) (block err) = block₁ (runtimeWarningᴮ H B err)
-runtimeWarningᴱ H (binexp M op N) (BinOpMismatch₁ v w p) = BinOpMismatch₁ (runtimeBinOpWarning H v p)
-runtimeWarningᴱ H (binexp M op N) (BinOpMismatch₂ v w p) = BinOpMismatch₂ (runtimeBinOpWarning H w p)
+runtimeWarningᴱ H (binexp M op N) (BinOpMismatch₁ v w p) with isntError H v
+runtimeWarningᴱ H (binexp M op N) (BinOpMismatch₁ v w p) | Left W = bin₁ W
+runtimeWarningᴱ H (binexp M op N) (BinOpMismatch₁ v w p) | Right r = BinOpMismatch₁ r (runtimeBinOpWarning H v p)
+runtimeWarningᴱ H (binexp M op N) (BinOpMismatch₂ v w p) with isntError H w
+runtimeWarningᴱ H (binexp M op N) (BinOpMismatch₂ v w p) | Left W = bin₂ W
+runtimeWarningᴱ H (binexp M op N) (BinOpMismatch₂ v w p) | Right r = BinOpMismatch₂ r (runtimeBinOpWarning H w p)
 runtimeWarningᴱ H (binexp M op N) (bin₁ err) = bin₁ (runtimeWarningᴱ H M err)
 runtimeWarningᴱ H (binexp M op N) (bin₂ err) = bin₂ (runtimeWarningᴱ H N err)
 

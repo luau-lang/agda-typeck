@@ -57,8 +57,8 @@ warningToStringᴱ (function f ⟨ var x ∈ T ⟩∈ U is B end) (function₁ W
 warningToStringᴱ block var b ∈ T is B end (UnsafeBlock W) =  "Block " ++ varToString b ++ " has unsafe type " ++ typeToString T
 warningToStringᴱ block var b ∈ T is B end (BlockMismatch {U = U} p) =  "Block " ++ varToString b ++ " has type " ++ typeToString T ++ " but body returns " ++ typeToString U ++ subtypeWarningToString p
 warningToStringᴱ block var b ∈ T is B end (block₁ W) = warningToStringᴮ B W ++ "\n  in block " ++ varToString b
-warningToStringᴱ (binexp M op N) (BinOpMismatch₁ {T = T} p) = "Binary operator " ++ binOpToString op ++ " lhs has type " ++ typeToString T ++ subtypeWarningToString p
-warningToStringᴱ (binexp M op N) (BinOpMismatch₂ {U = U} p) = "Binary operator " ++ binOpToString op ++ " rhs has type " ++ typeToString U ++ subtypeWarningToString p
+warningToStringᴱ (binexp M op N) (BinOpMismatch₁ {T = T} _ p) = "Binary operator " ++ binOpToString op ++ " lhs has type " ++ typeToString T ++ subtypeWarningToString p
+warningToStringᴱ (binexp M op N) (BinOpMismatch₂ {U = U} _ p) = "Binary operator " ++ binOpToString op ++ " rhs has type " ++ typeToString U ++ subtypeWarningToString p
 warningToStringᴱ (binexp M op N) (bin₁ W) = warningToStringᴱ M W
 warningToStringᴱ (binexp M op N) (bin₂ W) = warningToStringᴱ N W
 

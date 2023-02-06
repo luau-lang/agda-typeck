@@ -308,6 +308,9 @@ function-<:-funktion = <:-function (λ ()) (λ p → any)
 function-<:-unknown : ∀ {S T} → (S ⇒ T) <: unknown
 function-<:-unknown p = left (left (left (left (function-<:-funktion p))))
 
+error-≮:-function : ∀ {S T} → error ≮: (S ⇒ T)
+error-≮:-function = witness error function-error
+
 -- Properties of scalars
 scalar-<: : ∀ S {T} → Language T ⟨ scalar S ⟩ → (scalar S <: T)
 scalar-<: S p (scalar S) = p
