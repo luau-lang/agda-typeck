@@ -61,6 +61,8 @@ data Warningᴱ H {Γ} where
 
   FunctionCallMismatch : ∀ {M N T U} {D₁ : Γ ⊢ᴱ M ∈ T} {D₂ : Γ ⊢ᴱ N ∈ U} →
 
+    (error ≮: T) → -- error suppression
+    (error ≮: U) → -- error suppression
     (U ≮: src T) →
     -----------------
     Warningᴱ H (app D₁ D₂)
