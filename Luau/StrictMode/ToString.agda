@@ -47,8 +47,8 @@ warningToStringᴮ : ∀ {H Γ T} B → {D : Γ ⊢ᴮ B ∈ T} → Warningᴮ H
 
 warningToStringᴱ (var x) (UnboundVariable p) = "Unbound variable " ++ varToString x
 warningToStringᴱ (val (addr a)) (UnallocatedAddress p) = "Unallocated address " ++ addrToString a
-warningToStringᴱ (M $ N) (FunctionCallMismatch {T = T} {U = U} p) = "Function has type " ++ typeToString T ++ " but argument has type " ++ typeToString U ++ subtypeWarningToString p
-warningToStringᴱ (M $ N) (NotFunctionCall {T = T} p) = "Function has type " ++ typeToString T ++ " which isn't a function type " ++ subtypeWarningToString p
+warningToStringᴱ (M $ N) (FunctionCallMismatch {T = T} {U = U} _ _ p) = "Function has type " ++ typeToString T ++ " but argument has type " ++ typeToString U ++ subtypeWarningToString p
+warningToStringᴱ (M $ N) (NotFunctionCall {T = T} _ p) = "Function has type " ++ typeToString T ++ " which isn't a function type " ++ subtypeWarningToString p
 warningToStringᴱ (M $ N) (app₁ W) = warningToStringᴱ M W
 warningToStringᴱ (M $ N) (app₂ W) = warningToStringᴱ N W
 warningToStringᴱ (function f ⟨ var x ∈ T ⟩∈ U is B end) (FunctionDefnMismatch {V = V} p) = "Function expresion " ++ varToString f ++ " has return type " ++ typeToString U ++ " but body returns " ++ typeToString V ++ subtypeWarningToString p

@@ -28,7 +28,7 @@ open import Properties.Functions using (_∘_)
 open import Properties.DecSubtyping using (dec-subtyping)
 open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; error-≮:-never; scalar-<:-unknown; function-<:-unknown; any-≮:-scalar; scalar-≮:-never; any-≮:-never; <:-refl; <:-any; <:-impl-¬≮:; <:-never; <:-∪-lub; <:-∩-left; <:-∩-right; <:-∪-left; <:-∪-right)
 open import Properties.ResolveOverloads using (src-any-≮:; any-src-≮:; <:-src; <:-srcᶠ; <:-resolve; resolve-<:-⇒; <:-resolve-⇒)
-open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; <:-trans-≮:; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; any-≮:-scalar; scalar-≮:-never; any-≮:-never; ≡-impl-<:; ≡-trans-<:; <:-trans-≡; ≮:-trans-<:; <:-trans)
+open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; <:-trans-≮:; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; any-≮:-scalar; scalar-≮:-never; any-≮:-never; error-≮:-scalar; ≡-impl-<:; ≡-trans-<:; <:-trans-≡; ≮:-trans-<:; <:-trans)
 open import Properties.TypeCheck using (typeOfᴼ; typeOfᴹᴼ; typeOfⱽ; typeOfᴱ; typeOfᴮ; typeCheckᴱ; typeCheckᴮ; typeCheckᴼ; typeCheckᴴ)
 open import Properties.TypeNormalization using (normal; Normal; FunType; ErrScalar; OptScalar; _⇒_; _∩_; _∪_; never; error; scalar; normalize-<:; normal-∩ⁿ; normal-∩ⁿˢ)
 open import Properties.TypeSaturation using (Overloads; Saturated; _⊆ᵒ_; _<:ᵒ_; normal-saturate; normal-∩-saturate; normal-∪-saturate; saturated; <:-saturate; saturate-<:; defn; here; left; right)
@@ -357,7 +357,9 @@ Unsafe-impl-Warningᴱ H Γ (val (addr a)) W with remember (H [ a ]ᴴ)
 Unsafe-impl-Warningᴱ H Γ (val (addr a)) W | (nothing , p) = expr (UnallocatedAddress p)
 Unsafe-impl-Warningᴱ H Γ (val (addr a)) W | (just (function f ⟨ var x ∈ T ⟩∈ U is B end) , p) = heap (addr a p (UnsafeFunction (subst₁ Unsafe (cong orAny (cong typeOfᴹᴼ p)) W)))
 Unsafe-impl-Warningᴱ H Γ (M $ N) W with Unsafe-resolve (typeOfᴱ H Γ M) (typeOfᴱ H Γ N) W
-Unsafe-impl-Warningᴱ H Γ (M $ N) W | Left p = expr (NotFunctionCall p)
+Unsafe-impl-Warningᴱ H Γ (M $ N) W | Left p with dec-Unsafe (typeOfᴱ H Γ M)
+Unsafe-impl-Warningᴱ H Γ (M $ N) W | Left p | Left V = mapᴱ+ app₁ (Unsafe-impl-Warningᴱ H Γ M V)
+Unsafe-impl-Warningᴱ H Γ (M $ N) W | Left p | Right ¬V = expr (NotFunctionCall (≮:-error ¬V) p)
 Unsafe-impl-Warningᴱ H Γ (M $ N) W | Right (Right V) = mapᴱ+ app₁ (Unsafe-impl-Warningᴱ H Γ M V)
 Unsafe-impl-Warningᴱ H Γ (M $ N) W | Right (Left p) with dec-Unsafe (typeOfᴱ H Γ M) | dec-Unsafe (typeOfᴱ H Γ N)
 Unsafe-impl-Warningᴱ H Γ (M $ N) W | Right (Left p) | Right M✓ | Right N✓ = expr (FunctionCallMismatch (≮:-error M✓) (≮:-error N✓) p)
@@ -512,14 +514,15 @@ reflect-substitutionᴱ H (val (addr a)) v x (UnallocatedAddress r) = Left (expr
 reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch M✓ N✓ p) with ≮:-substitutivityᴱ H N v x p
 reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch M✓ N✓ p) | Right W = Right (Right W)
 reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch M✓ N✓ p) | Left q with ≮:-substitutivityᴱ H M v x (src-any-≮: q)
-reflect-substitutionᴱ {Γ} {T} H (M $ N) v x (FunctionCallMismatch M✓ N✓ p) | Left q | Left r with dec-Unsafe (typeOfᴱ H (Γ ⊕ x ↦ T) M)| dec-Unsafe (typeOfᴱ H (Γ ⊕ x ↦ T) N)
+reflect-substitutionᴱ {Γ} {T} H (M $ N) v x (FunctionCallMismatch M✓ N✓ p) | Left q | Left r with dec-Unsafe (typeOfᴱ H (Γ ⊕ x ↦ T) M) | dec-Unsafe (typeOfᴱ H (Γ ⊕ x ↦ T) N)
 reflect-substitutionᴱ {Γ} {T} H (M $ N) v x (FunctionCallMismatch M✓ N✓ p) | Left q | Left r | Left W | _ = Left (mapᴱ+ app₁ (Unsafe-impl-Warningᴱ H (Γ ⊕ x ↦ T) M W))
 reflect-substitutionᴱ {Γ} {T} H (M $ N) v x (FunctionCallMismatch M✓ N✓ p) | Left q | Left r | _ | Left W = Left (mapᴱ+ app₂ (Unsafe-impl-Warningᴱ H (Γ ⊕ x ↦ T) N W))
 reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch M✓ N✓ p) | Left q | Left r | Right ¬W | Right ¬V = Left (expr (FunctionCallMismatch (≮:-error ¬W) (≮:-error ¬V) (any-src-≮: q (<:-unknown ¬W) r)))
 reflect-substitutionᴱ H (M $ N) v x (FunctionCallMismatch M✓ N✓ p) | Left q | Right W = Right (Right W)
-reflect-substitutionᴱ H (M $ N) v x (NotFunctionCall p) with ≮:-substitutivityᴱ H M v x p
-reflect-substitutionᴱ H (M $ N) v x (NotFunctionCall p) | Left q = Left (expr (NotFunctionCall q))
-reflect-substitutionᴱ H (M $ N) v x (NotFunctionCall p) | Right W = Right (Right W)
+reflect-substitutionᴱ {Γ} {T} H (M $ N) v x (NotFunctionCall M✓ p) with ≮:-substitutivityᴱ H M v x p | dec-Unsafe (typeOfᴱ H (Γ ⊕ x ↦ T) M)
+reflect-substitutionᴱ {Γ} {T} H (M $ N) v x (NotFunctionCall M✓ p) | Left q | Left W = Left (mapᴱ+ app₁ (Unsafe-impl-Warningᴱ H (Γ ⊕ x ↦ T) M W))
+reflect-substitutionᴱ H (M $ N) v x (NotFunctionCall M✓ p) | Left q | Right ¬W = Left (expr (NotFunctionCall (≮:-error ¬W) q))
+reflect-substitutionᴱ H (M $ N) v x (NotFunctionCall M✓ p) | Right W | _ = Right (Right W)
 reflect-substitutionᴱ H (M $ N) v x (app₁ W) = mapL (mapᴱ+ app₁) (reflect-substitutionᴱ H M v x W)
 reflect-substitutionᴱ H (M $ N) v x (app₂ W) = mapL (mapᴱ+ app₂) (reflect-substitutionᴱ H N v x W)
 reflect-substitutionᴱ H (function f ⟨ var y ∈ T ⟩∈ U is B end) v x (FunctionDefnMismatch q) = mapLR (expr ∘ FunctionDefnMismatch) Right (≮:-substitutivityᴮ-unless H B v x y (x ≡ⱽ y) q)
@@ -583,8 +586,8 @@ reflect-weakeningᴱ Γ H (val (addr a)) h (UnallocatedAddress p) = UnallocatedA
 reflect-weakeningᴱ Γ H (M $ N) h W′ with ≡-heap-weakeningᴱ Γ H M h | ≡-heap-weakeningᴱ Γ H N h
 reflect-weakeningᴱ Γ H (M $ N) h W′ | Left W | _ = app₁ W
 reflect-weakeningᴱ Γ H (M $ N) h W′ | _ | Left W = app₂ W
-reflect-weakeningᴱ Γ H (M $ N) h (NotFunctionCall p) | Right q | Right r = NotFunctionCall (≡-trans-≮: (sym q) p)
-reflect-weakeningᴱ Γ H (M $ N) h (FunctionCallMismatch  M✓  N✓ p) | Right q | Right r = FunctionCallMismatch (≮:-trans-≡ M✓ q) (≮:-trans-≡ N✓ r) (≡-trans-≮: (sym r) (≮:-trans-≡ p (cong src q)))
+reflect-weakeningᴱ Γ H (M $ N) h (NotFunctionCall M✓ p) | Right q | Right r = NotFunctionCall (≮:-trans-≡ M✓ q) (≡-trans-≮: (sym q) p)
+reflect-weakeningᴱ Γ H (M $ N) h (FunctionCallMismatch M✓ N✓ p) | Right q | Right r = FunctionCallMismatch (≮:-trans-≡ M✓ q) (≮:-trans-≡ N✓ r) (≡-trans-≮: (sym r) (≮:-trans-≡ p (cong src q)))
 reflect-weakeningᴱ Γ H (M $ N) h (app₁ W′) | Right q | Right r = app₁ (reflect-weakeningᴱ Γ H M h W′)
 reflect-weakeningᴱ Γ H (M $ N) h (app₂ W′) | Right q | Right r = app₂ (reflect-weakeningᴱ Γ H N h W′)
 reflect-weakeningᴱ Γ H (binexp M op N) h (BinOpMismatch₁ p) = BinOpMismatch₁ (≮:-heap-weakeningᴱ Γ H M h p)
@@ -620,13 +623,13 @@ reflectᴱ H (M $ N) s W′ with dec-Unsafe (typeOfᴱ H ∅ M) | dec-Unsafe (ty
 reflectᴱ H (M $ N) s W′ | Left W | _ = mapᴱ+ app₁ (Unsafe-impl-Warningᴱ H ∅ M W)
 reflectᴱ H (M $ N) s W′ | _ | Left W = mapᴱ+ app₂ (Unsafe-impl-Warningᴱ H ∅ N W)
 reflectᴱ H (M $ N) (app₁ s) (FunctionCallMismatch M✓ N✓ p) | Right ¬W | Right ¬V = cond (expr ∘ FunctionCallMismatch (≮:-error ¬W) (≮:-error ¬V) ∘ ≮:-heap-weakeningᴱ ∅ H N (rednᴱ⊑ s) ∘ any-src-≮: p (<:-unknown ¬W)) (mapᴱ+ app₁) (≮:-reductionᴱ H M s (src-any-≮: p))
-reflectᴱ H (M $ N) (app₁ s) (NotFunctionCall p) | Right ¬W | Right ¬V = cond (expr ∘ NotFunctionCall) (mapᴱ+ app₁) (≮:-reductionᴱ H M s p)
+reflectᴱ H (M $ N) (app₁ s) (NotFunctionCall M✓  p) | Right ¬W | Right ¬V = cond (expr ∘ NotFunctionCall (≮:-error ¬W)) (mapᴱ+ app₁) (≮:-reductionᴱ H M s p)
 reflectᴱ H (M $ N) (app₁ s) (app₁ W′) | Right ¬W | Right ¬V = mapᴱ+ app₁ (reflectᴱ H M s W′)
 reflectᴱ H (M $ N) (app₁ s) (app₂ W′) | Right ¬W | Right ¬V = expr (app₂ (reflect-weakeningᴱ ∅ H N (rednᴱ⊑ s) W′))
 reflectᴱ H (M $ N) (app₂ p s) (FunctionCallMismatch M✓ N✓ q) | Right ¬W | Right ¬V with (≮:-reductionᴱ H N s q)
 reflectᴱ H (M $ N) (app₂ p s) (FunctionCallMismatch M✓ N✓ q) | Right ¬W | Right ¬V | Left r = expr (FunctionCallMismatch (≮:-error ¬W) (≮:-error ¬V) (any-src-≮: r (<:-unknown ¬W) (≮:-heap-weakeningᴱ ∅ H M (rednᴱ⊑ s) (src-any-≮: r))))
 reflectᴱ H (M $ N) (app₂ p s) (FunctionCallMismatch M✓ N✓ q) | Right ¬W | Right ¬V | Right W = mapᴱ+ app₂ W
-reflectᴱ H (M $ N) (app₂ p s) (NotFunctionCall q) | Right ¬W | Right ¬V = expr (NotFunctionCall (≮:-heap-weakeningᴱ ∅ H M (rednᴱ⊑ s) q))
+reflectᴱ H (M $ N) (app₂ p s) (NotFunctionCall M✓ q) | Right ¬W | Right ¬V = expr (NotFunctionCall (≮:-error ¬W) (≮:-heap-weakeningᴱ ∅ H M (rednᴱ⊑ s) q))
 reflectᴱ H (M $ N) (app₂ p s) (app₁ W′) | Right ¬W | Right ¬V = expr (app₁ (reflect-weakeningᴱ ∅ H M (rednᴱ⊑ s) W′))
 reflectᴱ H (M $ N) (app₂ p s) (app₂ W′) | Right ¬W | Right ¬V = mapᴱ+ app₂ (reflectᴱ H N s W′)
 reflectᴱ H (val (addr a) $ N) (beta (function f ⟨ var x ∈ T ⟩∈ U is B end) v refl p) (BlockMismatch q) | Right ¬W | Right ¬V with ≮:-substitutivityᴮ H B v x q 
@@ -742,6 +745,13 @@ isntFunction H (num x) p = scalar-≮:-function NUMBER
 isntFunction H (bool x) p = scalar-≮:-function BOOLEAN
 isntFunction H (str x) p = scalar-≮:-function STRING
 
+isntError : ∀ H v → (valueType v ≢ function) → (error ≮: typeOfᴱ H ∅ (val v))
+isntError H nil p = error-≮:-scalar NIL
+isntError H (addr a) p = CONTRADICTION (p refl)
+isntError H (num x) p = error-≮:-scalar NUMBER
+isntError H (bool x) p = error-≮:-scalar BOOLEAN
+isntError H (str x) p = error-≮:-scalar STRING
+
 isntEmpty : ∀ H v → (typeOfᴱ H ∅ (val v) ≮: never)
 isntEmpty H nil = scalar-≮:-never NIL
 isntEmpty H (addr a) with remember (H [ a ]ᴴ)
@@ -767,7 +777,7 @@ runtimeWarningᴮ : ∀ H B → RuntimeErrorᴮ H B → Warningᴮ H (typeCheck�
 
 runtimeWarningᴱ H (var x) UnboundVariable = UnboundVariable refl
 runtimeWarningᴱ H (val (addr a)) (SEGV p) = UnallocatedAddress p
-runtimeWarningᴱ H (M $ N) (FunctionMismatch v w p) = NotFunctionCall (isntFunction H v p)
+runtimeWarningᴱ H (M $ N) (FunctionMismatch v w p) = NotFunctionCall (isntError H v p) (isntFunction H v p)
 runtimeWarningᴱ H (M $ N) (app₁ err) = app₁ (runtimeWarningᴱ H M err)
 runtimeWarningᴱ H (M $ N) (app₂ err) = app₂ (runtimeWarningᴱ H N err)
 runtimeWarningᴱ H (block var b ∈ T is B end) (block err) = block₁ (runtimeWarningᴮ H B err)

@@ -330,6 +330,9 @@ scalar-∩-error-<:-never S (() , error)
 function-≮:-scalar : ∀ {S T} U → ((S ⇒ T) ≮: scalar U)
 function-≮:-scalar S = witness (function-ok {t = ⟨⟩} diverge) (scalar-function S)
 
+error-≮:-scalar : ∀ S → (error ≮: scalar S)
+error-≮:-scalar S = witness error (scalar-error S)
+
 scalar-≮:-function : ∀ {S T} U → (scalar U ≮: (S ⇒ T))
 scalar-≮:-function S = witness (scalar S) (function-scalar S)
 

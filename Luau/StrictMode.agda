@@ -55,6 +55,7 @@ data Warningᴱ H {Γ} where
 
   NotFunctionCall : ∀ {M N T U} {D₁ : Γ ⊢ᴱ M ∈ T} {D₂ : Γ ⊢ᴱ N ∈ U} →
 
+    (error ≮: T) → -- error suppression
     (T ≮: funktion) →
     -----------------
     Warningᴱ H (app D₁ D₂)
