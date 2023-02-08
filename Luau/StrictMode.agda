@@ -108,6 +108,7 @@ data Warningᴱ H {Γ} where
     
   FunctionDefnMismatch : ∀ {f x B T U V} {D : (Γ ⊕ x ↦ T) ⊢ᴮ B ∈ V} →
 
+    (error ≮: V) → -- error suppression
     (V ≮: U) →
     -------------------------
     Warningᴱ H (function {f} {U = U} D)
@@ -120,6 +121,7 @@ data Warningᴱ H {Γ} where
 
   BlockMismatch : ∀ {b B T U} {D : Γ ⊢ᴮ B ∈ U} →
 
+    (error ≮: U) → -- error suppression
     (U ≮: T) →
     ------------------------------
     Warningᴱ H (block {b} {T = T} D)
@@ -152,6 +154,7 @@ data Warningᴮ H {Γ} where
 
   LocalVarMismatch : ∀ {x M B T U V} {D₁ : Γ ⊢ᴱ M ∈ U} {D₂ : (Γ ⊕ x ↦ T) ⊢ᴮ B ∈ V} →
 
+    (error ≮: U) → -- error suppression
     (U ≮: T) →
     --------------------
     Warningᴮ H (local D₁ D₂)
@@ -170,6 +173,7 @@ data Warningᴮ H {Γ} where
 
   FunctionDefnMismatch : ∀ {f x B C T U V W} {D₁ : (Γ ⊕ x ↦ T) ⊢ᴮ C ∈ V} {D₂ : (Γ ⊕ f ↦ (T ⇒ U)) ⊢ᴮ B ∈ W} →
 
+    (error ≮: V) → -- error suppression
     (V ≮: U) →
     -------------------------------------
     Warningᴮ H (function D₁ D₂)

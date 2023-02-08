@@ -51,22 +51,22 @@ warningToStringᴱ (M $ N) (FunctionCallMismatch {T = T} {U = U} _ _ p) = "Funct
 warningToStringᴱ (M $ N) (NotFunctionCall {T = T} _ p) = "Function has type " ++ typeToString T ++ " which isn't a function type " ++ subtypeWarningToString p
 warningToStringᴱ (M $ N) (app₁ W) = warningToStringᴱ M W
 warningToStringᴱ (M $ N) (app₂ W) = warningToStringᴱ N W
-warningToStringᴱ (function f ⟨ var x ∈ T ⟩∈ U is B end) (FunctionDefnMismatch {V = V} p) = "Function expresion " ++ varToString f ++ " has return type " ++ typeToString U ++ " but body returns " ++ typeToString V ++ subtypeWarningToString p
+warningToStringᴱ (function f ⟨ var x ∈ T ⟩∈ U is B end) (FunctionDefnMismatch {V = V} _ p) = "Function expresion " ++ varToString f ++ " has return type " ++ typeToString U ++ " but body returns " ++ typeToString V ++ subtypeWarningToString p
 warningToStringᴱ (function f ⟨ var x ∈ T ⟩∈ U is B end) (UnsafeFunction W) = "Function expresion " ++ varToString f ++ " has unsafe type " ++ typeToString (T ⇒ U)
 warningToStringᴱ (function f ⟨ var x ∈ T ⟩∈ U is B end) (function₁ W) = warningToStringᴮ B W ++ "\n  in function expression " ++ varToString f
 warningToStringᴱ block var b ∈ T is B end (UnsafeBlock W) =  "Block " ++ varToString b ++ " has unsafe type " ++ typeToString T
-warningToStringᴱ block var b ∈ T is B end (BlockMismatch {U = U} p) =  "Block " ++ varToString b ++ " has type " ++ typeToString T ++ " but body returns " ++ typeToString U ++ subtypeWarningToString p
+warningToStringᴱ block var b ∈ T is B end (BlockMismatch {U = U} _ p) =  "Block " ++ varToString b ++ " has type " ++ typeToString T ++ " but body returns " ++ typeToString U ++ subtypeWarningToString p
 warningToStringᴱ block var b ∈ T is B end (block₁ W) = warningToStringᴮ B W ++ "\n  in block " ++ varToString b
 warningToStringᴱ (binexp M op N) (BinOpMismatch₁ {T = T} _ p) = "Binary operator " ++ binOpToString op ++ " lhs has type " ++ typeToString T ++ subtypeWarningToString p
 warningToStringᴱ (binexp M op N) (BinOpMismatch₂ {U = U} _ p) = "Binary operator " ++ binOpToString op ++ " rhs has type " ++ typeToString U ++ subtypeWarningToString p
 warningToStringᴱ (binexp M op N) (bin₁ W) = warningToStringᴱ M W
 warningToStringᴱ (binexp M op N) (bin₂ W) = warningToStringᴱ N W
 
-warningToStringᴮ (function f ⟨ var x ∈ T ⟩∈ U is C end ∙ B) (FunctionDefnMismatch {V = V} p) = "Function declaration " ++ varToString f ++ " has return type " ++ typeToString U ++ " but body returns " ++ typeToString V ++ subtypeWarningToString p
+warningToStringᴮ (function f ⟨ var x ∈ T ⟩∈ U is C end ∙ B) (FunctionDefnMismatch {V = V} _ p) = "Function declaration " ++ varToString f ++ " has return type " ++ typeToString U ++ " but body returns " ++ typeToString V ++ subtypeWarningToString p
 warningToStringᴮ (function f ⟨ var x ∈ T ⟩∈ U is C end ∙ B) (UnsafeFunction W) = "Function declaration " ++ varToString f ++ " has unsafe type " ++ typeToString (T ⇒ U)
 warningToStringᴮ (function f ⟨ var x ∈ T ⟩∈ U is C end ∙ B) (function₁ W) = warningToStringᴮ C W ++ "\n  in function declaration " ++ varToString f
 warningToStringᴮ (function f ⟨ var x ∈ T ⟩∈ U is C end ∙ B) (function₂ W) = warningToStringᴮ B W
-warningToStringᴮ (local var x ∈ T ← M ∙ B) (LocalVarMismatch {U = U} p) =  "Local variable " ++ varToString x ++ " has type " ++ typeToString T ++ " but expression has type " ++ typeToString U ++ subtypeWarningToString p
+warningToStringᴮ (local var x ∈ T ← M ∙ B) (LocalVarMismatch {U = U} _ p) =  "Local variable " ++ varToString x ++ " has type " ++ typeToString T ++ " but expression has type " ++ typeToString U ++ subtypeWarningToString p
 warningToStringᴮ (local var x ∈ T ← M ∙ B) (UnsafeLocal W) =  "Local variable " ++ varToString x ++ " has unsafe type " ++ typeToString T
 warningToStringᴮ (local var x ∈ T ← M ∙ B) (local₁ W) = warningToStringᴱ M W ++ "\n  in local variable declaration " ++ varToString x
 warningToStringᴮ (local var x ∈ T ← M ∙ B) (local₂ W) = warningToStringᴮ B W
