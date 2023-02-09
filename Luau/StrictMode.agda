@@ -11,6 +11,7 @@ open import Luau.Type using (Type; unknown; never; any; error; funktion; scalar;
 open import Luau.ResolveOverloads using (src; resolve)
 open import Luau.SafeTypes using (Safe; Unsafe)
 open import Luau.Subtyping using (_<:_; _≮:_)
+open import Luau.ErrorSuppression using (_≮:ᵘ_)
 open import Luau.Heap using (Heap; function_is_end) renaming (_[_] to _[_]ᴴ)
 open import Luau.VarCtxt using (VarCtxt; ∅; _⋒_; _↦_; _⊕_↦_; _⊝_) renaming (_[_] to _[_]ⱽ)
 open import Luau.TypeCheck using (_⊢ᴮ_∈_; _⊢ᴱ_∈_; ⊢ᴴ_; ⊢ᴼ_; _⊢ᴴᴱ_▷_∈_; _⊢ᴴᴮ_▷_∈_; var; addr; app; binexp; block; return; local; function; srcBinOp)
@@ -18,16 +19,6 @@ open import Properties.Contradiction using (¬)
 open import Properties.TypeCheck using (typeCheckᴮ)
 open import Properties.Product using (_,_)
 
--- Unsuppressed subtyping failure
-data _≮:ᵘ_ T U : Set where
-
-  _,_ :
-
-    (T ≮: U) →
-    (error ≮: T) → -- TODO: this is too restrictive!
-    -------------------
-    T ≮:ᵘ U
-  
 data Warningᴱ (H : Heap yes) {Γ} : ∀ {M T} → (Γ ⊢ᴱ M ∈ T) → Set
 data Warningᴮ (H : Heap yes) {Γ} : ∀ {B T} → (Γ ⊢ᴮ B ∈ T) → Set
 
