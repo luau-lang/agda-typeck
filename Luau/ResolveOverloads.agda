@@ -4,7 +4,7 @@ module Luau.ResolveOverloads where
 
 open import FFI.Data.Either using (Left; Right)
 open import Luau.Subtyping using (_<:_; _≮:_; Language; witness; scalar; never; function-ok)
-open import Luau.Type using (Type ; _⇒_; _∩_; _∪_; any; never)
+open import Luau.Type using (Type ; _⇒_; _∩_; _∪_; any; never; error)
 open import Luau.TypeSaturation using (saturate)
 open import Luau.TypeNormalization using (normalize)
 open import Properties.Contradiction using (CONTRADICTION)

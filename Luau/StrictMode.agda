@@ -18,6 +18,16 @@ open import Properties.Contradiction using (¬)
 open import Properties.TypeCheck using (typeCheckᴮ)
 open import Properties.Product using (_,_)
 
+-- Unsuppressed subtyping failure
+data _≮:ᵘ_ T U : Set where
+
+  _,_ :
+
+    (T ≮: U) →
+    (error ≮: T) → -- TODO: this is too restrictive!
+    -------------------
+    T ≮:ᵘ U
+  
 data Warningᴱ (H : Heap yes) {Γ} : ∀ {M T} → (Γ ⊢ᴱ M ∈ T) → Set
 data Warningᴮ (H : Heap yes) {Γ} : ∀ {B T} → (Γ ⊢ᴮ B ∈ T) → Set
 
@@ -37,16 +47,14 @@ data Warningᴱ H {Γ} where
 
   NotFunctionCall : ∀ {M N T U} {D₁ : Γ ⊢ᴱ M ∈ T} {D₂ : Γ ⊢ᴱ N ∈ U} →
 
-    (error ≮: T) → -- error suppression
-    (T ≮: funktion) →
+    (T ≮:ᵘ funktion) →
     -----------------
     Warningᴱ H (app D₁ D₂)
 
   FunctionCallMismatch : ∀ {M N T U} {D₁ : Γ ⊢ᴱ M ∈ T} {D₂ : Γ ⊢ᴱ N ∈ U} →
 
     (error ≮: T) → -- error suppression
-    (error ≮: U) → -- error suppression
-    (U ≮: src T) →
+    (U ≮:ᵘ src T) →
     -----------------
     Warningᴱ H (app D₁ D₂)
   
@@ -64,15 +72,13 @@ data Warningᴱ H {Γ} where
 
   BinOpMismatch₁ : ∀ {op M N T U} {D₁ : Γ ⊢ᴱ M ∈ T} {D₂ : Γ ⊢ᴱ N ∈ U} →
 
-    (error ≮: T) → -- error suppression
-    (T ≮: srcBinOp op) →
+    (T ≮:ᵘ srcBinOp op) →
     ------------------------------
     Warningᴱ H (binexp {op} D₁ D₂)
 
   BinOpMismatch₂ : ∀ {op M N T U} {D₁ : Γ ⊢ᴱ M ∈ T} {D₂ : Γ ⊢ᴱ N ∈ U} →
 
-    (error ≮: U) → -- error suppression
-    (U ≮: srcBinOp op) →
+    (U ≮:ᵘ srcBinOp op) →
     ------------------------------
     Warningᴱ H (binexp {op} D₁ D₂)
 
@@ -90,8 +96,7 @@ data Warningᴱ H {Γ} where
     
   FunctionDefnMismatch : ∀ {f x B T U V} {D : (Γ ⊕ x ↦ T) ⊢ᴮ B ∈ V} →
 
-    (error ≮: V) → -- error suppression
-    (V ≮: U) →
+    (V ≮:ᵘ U) →
     -------------------------
     Warningᴱ H (function {f} {U = U} D)
 
@@ -103,8 +108,7 @@ data Warningᴱ H {Γ} where
 
   BlockMismatch : ∀ {b B T U} {D : Γ ⊢ᴮ B ∈ U} →
 
-    (error ≮: U) → -- error suppression
-    (U ≮: T) →
+    (U ≮:ᵘ T) →
     ------------------------------
     Warningᴱ H (block {b} {T = T} D)
 
@@ -136,8 +140,7 @@ data Warningᴮ H {Γ} where
 
   LocalVarMismatch : ∀ {x M B T U V} {D₁ : Γ ⊢ᴱ M ∈ U} {D₂ : (Γ ⊕ x ↦ T) ⊢ᴮ B ∈ V} →
 
-    (error ≮: U) → -- error suppression
-    (U ≮: T) →
+    (U ≮:ᵘ T) →
     --------------------
     Warningᴮ H (local D₁ D₂)
 
@@ -155,8 +158,7 @@ data Warningᴮ H {Γ} where
 
   FunctionDefnMismatch : ∀ {f x B C T U V W} {D₁ : (Γ ⊕ x ↦ T) ⊢ᴮ C ∈ V} {D₂ : (Γ ⊕ f ↦ (T ⇒ U)) ⊢ᴮ B ∈ W} →
 
-    (error ≮: V) → -- error suppression
-    (V ≮: U) →
+    (V ≮:ᵘ U) →
     -------------------------------------
     Warningᴮ H (function D₁ D₂)
 
