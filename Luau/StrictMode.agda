@@ -9,6 +9,7 @@ open import FFI.Data.Maybe using (just; nothing)
 open import Luau.Syntax using (Expr; Stat; Block; BinaryOperator; yes; nil; addr; var; binexp; var_∈_; _⟨_⟩∈_; function_is_end; _$_; block_is_end; local_←_; _∙_; done; return; name; +; -; *; /; <; >; <=; >=; ··)
 open import Luau.Type using (Type; unknown; never; any; error; funktion; scalar; _⇒_; _∪_; _∩_)
 open import Luau.ResolveOverloads using (src; resolve)
+open import Luau.SafeTypes using (Safe; Unsafe)
 open import Luau.Subtyping using (_<:_; _≮:_)
 open import Luau.Heap using (Heap; function_is_end) renaming (_[_] to _[_]ᴴ)
 open import Luau.VarCtxt using (VarCtxt; ∅; _⋒_; _↦_; _⊕_↦_; _⊝_) renaming (_[_] to _[_]ⱽ)
@@ -16,25 +17,6 @@ open import Luau.TypeCheck using (_⊢ᴮ_∈_; _⊢ᴱ_∈_; ⊢ᴴ_; ⊢ᴼ_; 
 open import Properties.Contradiction using (¬)
 open import Properties.TypeCheck using (typeCheckᴮ)
 open import Properties.Product using (_,_)
-
-data Unsafe : Type → Set where
-
-  any : Unsafe any
-  error : Unsafe error
-  ∪-left : ∀ {T U} → Unsafe T → Unsafe (T ∪ U)
-  ∪-right : ∀ {T U} → Unsafe U → Unsafe (T ∪ U)
-  ∩-left : ∀ {T U} → Unsafe T → Unsafe (T ∩ U)
-  ∩-right : ∀ {T U} → Unsafe U → Unsafe (T ∩ U)
-  param : ∀ {T U} → Unsafe T → Unsafe (T ⇒ U)
-  result : ∀ {T U} → Unsafe U → Unsafe (T ⇒ U)
-
-data Safe : Type → Set where
-
-  never : Safe never
-  _∩_ : ∀ {T U} → Safe T → Safe U → Safe (T ∩ U)
-  _∪_ : ∀ {T U} → Safe T → Safe U → Safe (T ∪ U)
-  function : ∀ {T U} → Safe T → Safe U → Safe (T ⇒ U)
-  scalar : ∀ S → Safe (scalar S)
 
 data Warningᴱ (H : Heap yes) {Γ} : ∀ {M T} → (Γ ⊢ᴱ M ∈ T) → Set
 data Warningᴮ (H : Heap yes) {Γ} : ∀ {B T} → (Γ ⊢ᴮ B ∈ T) → Set

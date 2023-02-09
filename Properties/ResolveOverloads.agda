@@ -123,7 +123,26 @@ any-src-≮: _ p (witness q function-error) = CONTRADICTION (language-comp ((((f
                                                                              , scalar-error NIL)
                                                                             , scalar-error BOOLEAN) (p q))
 
+data FoundSrcOverloadTo F G : Set where
+
+  found : ∀ S T →
+
+    Overloads F (S ⇒ T) →
+    srcⁿ G <: S →
+    --------------------
+    FoundSrcOverloadTo F G
+
+findSrcOverload : ∀ {F G} → (Gᶠ : FunType G) → (Fˢ : Saturated F) → (G ⊆ᵒ F) → FoundSrcOverloadTo F G
+findSrcOverload (S ⇒ T) Fˢ G⊆F = found S T (G⊆F here) <:-refl
+findSrcOverload (G₁ᶠ ∩ G₂ᶠ) Fˢ G⊆F with findSrcOverload G₁ᶠ Fˢ (G⊆F ∘ left) | findSrcOverload G₂ᶠ Fˢ (G⊆F ∘ right)
+findSrcOverload (G₁ᶠ ∩ G₂ᶠ) (defn cap cup) G⊆F | found S₁ T₁ o₁ p₁ | found S₂ T₂ o₂ p₂ with cup o₁ o₂
+findSrcOverload (G₁ᶠ ∩ G₂ᶠ) (defn cap cup) G⊆F | found S₁ T₁ o₁ p₁ | found S₂ T₂ o₂ p₂ | defn {S = S₀} {T = T₀} o₀ p₀ _ = found S₀ T₀ o₀ (<:-trans (<:-∪-lub (<:-trans p₁ <:-∪-left) (<:-trans p₂ <:-∪-right)) p₀)
+
+FoundSrcOverload : Type → Set
+FoundSrcOverload F = FoundSrcOverloadTo F F
+
 -- src is contravariant
+
 <:-srcᶠ : ∀ {F G} → (Fᶠ : FunType F) → (Gᶠ : FunType G) → F <: G → srcⁿ G <: srcⁿ F
 <:-srcᶠ F G p q = src-function-errᶠ F (<:-impl-⊇ p (¬function-err-srcᶠ G q))
 
