@@ -29,6 +29,7 @@ open import Properties.Dec using (Dec; yes; no)
 open import Properties.Contradiction using (CONTRADICTION; ¬)
 open import Properties.Functions using (_∘_)
 open import Properties.DecSubtyping using (dec-subtyping)
+open import Properties.ErrorSuppression using (dec-Unsafe-≮:ᵘ)
 open import Properties.SafeTypes using (Unsafe-resolve; <:-error-Unsafe; dec-Unsafe; <:-unknown)
 open import Properties.Subtyping using (any-≮:; ≡-trans-≮:; ≮:-trans-≡; ≮:-trans; ≮:-refl; scalar-≢-impl-≮:; function-≮:-scalar; scalar-≮:-function; function-≮:-never; scalar-<:-unknown; function-<:-unknown; any-≮:-scalar; scalar-≮:-never; any-≮:-never; <:-refl; <:-any; <:-impl-¬≮:; <:-never; <:-∪-lub; <:-∩-left; <:-∩-right; <:-∪-left; <:-∪-right)
 open import Properties.ResolveOverloads using (src-any-≮:; any-src-≮:; <:-src; <:-srcᶠ; <:-resolve; resolve-<:-⇒; <:-resolve-⇒)
@@ -148,38 +149,38 @@ Unsafe-impl-Warningᴮ H Γ (local var x ∈ T ← M ∙ B) W = local₂ᴮ+ (Un
 Unsafe-impl-Warningᴮ H Γ (function f ⟨ var x ∈ T ⟩∈ U is B end ∙ C) W = function₂ᴮ+ (Unsafe-impl-Warningᴮ H (Γ ⊕ f ↦ (T ⇒ U)) C W)
 Unsafe-impl-Warningᴮ H Γ (return M ∙ B) W = mapᴱᴮ+ return (Unsafe-impl-Warningᴱ H Γ M W)
 
-NotFunctionCallᴱ+ p with dec-subtyping error _
-NotFunctionCallᴱ+ p | Left q = expr (NotFunctionCall (p , q))
-NotFunctionCallᴱ+ p | Right q = mapᴱ+ app₁ (Unsafe-impl-Warningᴱ _ _ _ (<:-error-Unsafe q))
+NotFunctionCallᴱ+ p with dec-Unsafe-≮:ᵘ p
+NotFunctionCallᴱ+ p | Left q = mapᴱ+ app₁ (Unsafe-impl-Warningᴱ _ _ _ q)
+NotFunctionCallᴱ+ p | Right q = expr (NotFunctionCall q)
 
-FunctionCallMismatchᴱ+ p with dec-subtyping error _ | dec-subtyping error _
-FunctionCallMismatchᴱ+ p | Left q | Left r = expr (FunctionCallMismatch r (p , q))
-FunctionCallMismatchᴱ+ p | Right q | _ = mapᴱ+ app₂ (Unsafe-impl-Warningᴱ _ _ _ (<:-error-Unsafe q))
+FunctionCallMismatchᴱ+ p with dec-Unsafe-≮:ᵘ p | dec-subtyping error _
+FunctionCallMismatchᴱ+ p | Right q | Left r = expr (FunctionCallMismatch r q)
+FunctionCallMismatchᴱ+ p | Left q | _ = mapᴱ+ app₂ (Unsafe-impl-Warningᴱ _ _ _ q)
 FunctionCallMismatchᴱ+ p | _ | Right q = mapᴱ+ app₁ (Unsafe-impl-Warningᴱ _ _ _ (<:-error-Unsafe q))
 
-FunctionDefnMismatchᴱ+ p with dec-subtyping error _
-FunctionDefnMismatchᴱ+ p | Left q = expr (FunctionDefnMismatch (p , q))
-FunctionDefnMismatchᴱ+ p | Right q = function₁ᴱ+ (Unsafe-impl-Warningᴮ _ _ _ (<:-error-Unsafe q))
+FunctionDefnMismatchᴱ+ p with dec-Unsafe-≮:ᵘ p
+FunctionDefnMismatchᴱ+ p | Left q = function₁ᴱ+ (Unsafe-impl-Warningᴮ _ _ _ q)
+FunctionDefnMismatchᴱ+ p | Right q = expr (FunctionDefnMismatch q)
 
-BlockMismatchᴱ+ p with dec-subtyping error _
-BlockMismatchᴱ+ p | Left q = expr (BlockMismatch (p , q)) 
-BlockMismatchᴱ+ p | Right q = mapᴮᴱ+ block₁ (Unsafe-impl-Warningᴮ _ _ _ (<:-error-Unsafe q))
+BlockMismatchᴱ+ p with dec-Unsafe-≮:ᵘ p
+BlockMismatchᴱ+ p | Left q = mapᴮᴱ+ block₁ (Unsafe-impl-Warningᴮ _ _ _ q)
+BlockMismatchᴱ+ p | Right q = expr (BlockMismatch q) 
 
-BinOpMismatch₁ᴱ+ p with dec-subtyping error _
-BinOpMismatch₁ᴱ+ p | Left q = expr (BinOpMismatch₁ (p , q))
-BinOpMismatch₁ᴱ+ p | Right q = mapᴱ+ bin₁ (Unsafe-impl-Warningᴱ _ _ _ (<:-error-Unsafe q))
+BinOpMismatch₁ᴱ+ p with dec-Unsafe-≮:ᵘ p
+BinOpMismatch₁ᴱ+ p | Left q = mapᴱ+ bin₁ (Unsafe-impl-Warningᴱ _ _ _ q)
+BinOpMismatch₁ᴱ+ p | Right q = expr (BinOpMismatch₁ q)
 
-BinOpMismatch₂ᴱ+ p with dec-subtyping error _
-BinOpMismatch₂ᴱ+ p | Left q = expr (BinOpMismatch₂ (p , q))
-BinOpMismatch₂ᴱ+ p | Right q = mapᴱ+ bin₂ (Unsafe-impl-Warningᴱ _ _ _ (<:-error-Unsafe q))
+BinOpMismatch₂ᴱ+ p with dec-Unsafe-≮:ᵘ p
+BinOpMismatch₂ᴱ+ p | Left q = mapᴱ+ bin₂ (Unsafe-impl-Warningᴱ _ _ _ q)
+BinOpMismatch₂ᴱ+ p | Right q = expr (BinOpMismatch₂ q)
 
-FunctionDefnMismatchᴮ+ p with dec-subtyping error _
-FunctionDefnMismatchᴮ+ p | Left q = block (FunctionDefnMismatch (p , q))
-FunctionDefnMismatchᴮ+ p | Right q = function₁ᴮ+ (Unsafe-impl-Warningᴮ _ _ _ (<:-error-Unsafe q))
+FunctionDefnMismatchᴮ+ p with dec-Unsafe-≮:ᵘ p
+FunctionDefnMismatchᴮ+ p | Left q = function₁ᴮ+ (Unsafe-impl-Warningᴮ _ _ _ q)
+FunctionDefnMismatchᴮ+ p | Right q = block (FunctionDefnMismatch q)
 
-LocalVarMismatchᴮ+ p with dec-subtyping error _
-LocalVarMismatchᴮ+ p | Left q = block (LocalVarMismatch (p , q))
-LocalVarMismatchᴮ+ p | Right q = local₁ᴮ+ (Unsafe-impl-Warningᴱ _ _ _ (<:-error-Unsafe q))
+LocalVarMismatchᴮ+ p with dec-Unsafe-≮:ᵘ p
+LocalVarMismatchᴮ+ p | Left q = local₁ᴮ+ (Unsafe-impl-Warningᴱ _ _ _ q)
+LocalVarMismatchᴮ+ p | Right q = block (LocalVarMismatch q)
 
 local₁ᴮ+ W = mapᴱᴮ+ local₁ W
 
