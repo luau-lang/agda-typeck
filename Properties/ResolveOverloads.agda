@@ -3,7 +3,7 @@
 module Properties.ResolveOverloads where
 
 open import FFI.Data.Either using (Left; Right)
-open import Luau.ResolveOverloads using (Resolved; src; srcⁿ; resolve; resolveⁿ; resolveᶠ; resolveˢ; target; yes; no)
+open import Luau.ResolveOverloads using (Resolved; src; srcⁿ; resolve; resolveⁿ; resolveᶠ; resolveToˢ; target; yes; no)
 open import Luau.Subtyping using (_<:_; _≮:_; Language; ¬Language; witness; scalar; any; never; function-ok; function-nok; function-scalar; function-warning; function-error; function-function; scalar-scalar; scalar-function; scalar-warning; scalar-error; _,_; left; right; _↦_; ⟨⟩; ⟨_⟩; warning; diverge; error; untyped; none; one)
 open import Luau.Type using (Type ; Scalar; _⇒_; _∩_; _∪_; scalar; any; never; error; unknown; NUMBER; BOOLEAN; NIL; STRING)
 open import Luau.TypeSaturation using (saturate)
@@ -11,7 +11,7 @@ open import Luau.TypeNormalization using (normalize)
 open import Properties.Contradiction using (CONTRADICTION)
 open import Properties.DecSubtyping using (dec-subtyping; dec-subtypingⁿ; <:-impl-<:ᵒ)
 open import Properties.Functions using (_∘_)
-open import Properties.Subtyping using (<:-refl; <:-trans; <:-trans-≮:; ≮:-trans-<:; <:-∩-left; <:-∩-right; <:-∩-glb; <:-impl-¬≮:; <:-any; <:-function; function-≮:-never; <:-never; any-≮:-function; scalar-≮:-function; ≮:-∪-right; scalar-≮:-never; error-≮:-never; <:-∪-left; <:-∪-right; <:-impl-⊇; language-comp)
+open import Properties.Subtyping using (<:-refl; <:-trans; <:-trans-≮:; ≮:-trans-<:; <:-∩-left; <:-∩-right; <:-∩-glb; <:-impl-¬≮:; <:-any; <:-function; function-≮:-never; <:-never; any-≮:-function; scalar-≮:-function; ≮:-∪-right; scalar-≮:-never; error-≮:-never; <:-∪-left; <:-∪-right; <:-∪-lub; <:-function-left; <:-impl-⊇; language-comp; dec-language)
 open import Properties.TypeNormalization using (Normal; FunType; normal; _⇒_; _∩_; _∪_; never; scalar; error; <:-normalize; normalize-<:; fun-≮:-never; scalar-≮:-fun; error-≮:-fun)
 open import Properties.TypeSaturation using (Overloads; Saturated; _⊆ᵒ_; _<:ᵒ_; normal-saturate; saturated; <:-saturate; saturate-<:; defn; here; left; right)
 
@@ -52,6 +52,11 @@ src-¬function-err {T = S ⇒ T} (function-warning p) = p
 src-¬function-err {T = any} p = never
 src-¬function-err {T = S ∪ T} p = src-¬function-errⁿ (normal (S ∪ T)) (<:-normalize (S ∪ T) p)
 src-¬function-err {T = S ∩ T} p = src-¬function-errⁿ (normal (S ∩ T)) (<:-normalize (S ∩ T) p)
+
+src-function-errᶠ : ∀ {F t} → (FunType F) → ¬Language F ⟨ warning t ⟩ → (Language (srcⁿ F) t)
+src-function-errᶠ {F} {t} Fᶠ p with dec-language (srcⁿ F) t
+src-function-errᶠ {F} {t} Fᶠ p | Left q = CONTRADICTION (language-comp p (function-err-srcⁿ Fᶠ q))
+src-function-errᶠ {F} {t} Fᶠ p | Right q = q
 
 fun-¬scalar : ∀ {T} s → FunType T → ¬Language T ⟨ scalar s ⟩
 fun-¬scalar s (S ⇒ T) = function-scalar s
@@ -117,6 +122,49 @@ any-src-≮: _ p (witness q function-error) = CONTRADICTION (language-comp ((((f
                                                                               scalar-error STRING)
                                                                              , scalar-error NIL)
                                                                             , scalar-error BOOLEAN) (p q))
+
+data FoundSrcOverloadTo F G : Set where
+
+  found : ∀ S T →
+
+    Overloads F (S ⇒ T) →
+    srcⁿ G <: S →
+    --------------------
+    FoundSrcOverloadTo F G
+
+findSrcOverload : ∀ {F G} → (Gᶠ : FunType G) → (Fˢ : Saturated F) → (G ⊆ᵒ F) → FoundSrcOverloadTo F G
+findSrcOverload (S ⇒ T) Fˢ G⊆F = found S T (G⊆F here) <:-refl
+findSrcOverload (G₁ᶠ ∩ G₂ᶠ) Fˢ G⊆F with findSrcOverload G₁ᶠ Fˢ (G⊆F ∘ left) | findSrcOverload G₂ᶠ Fˢ (G⊆F ∘ right)
+findSrcOverload (G₁ᶠ ∩ G₂ᶠ) (defn cap cup) G⊆F | found S₁ T₁ o₁ p₁ | found S₂ T₂ o₂ p₂ with cup o₁ o₂
+findSrcOverload (G₁ᶠ ∩ G₂ᶠ) (defn cap cup) G⊆F | found S₁ T₁ o₁ p₁ | found S₂ T₂ o₂ p₂ | defn {S = S₀} {T = T₀} o₀ p₀ _ = found S₀ T₀ o₀ (<:-trans (<:-∪-lub (<:-trans p₁ <:-∪-left) (<:-trans p₂ <:-∪-right)) p₀)
+
+FoundSrcOverload : Type → Set
+FoundSrcOverload F = FoundSrcOverloadTo F F
+
+-- src is contravariant
+
+<:-srcᶠ : ∀ {F G} → (Fᶠ : FunType F) → (Gᶠ : FunType G) → F <: G → srcⁿ G <: srcⁿ F
+<:-srcᶠ F G p q = src-function-errᶠ F (<:-impl-⊇ p (¬function-err-srcᶠ G q))
+
+<:-srcⁿ : ∀ {T U} → (Tⁿ : Normal T) → (Uⁿ : Normal U) → T <: U → srcⁿ U <: srcⁿ T
+<:-srcⁿ T (U ∪ V) p = <:-never
+<:-srcⁿ never U p = <:-any
+<:-srcⁿ (S ⇒ T) never p = CONTRADICTION (<:-impl-¬≮: p function-≮:-never)
+<:-srcⁿ (F ∩ G) never p = CONTRADICTION (<:-impl-¬≮: p (fun-≮:-never (F ∩ G)))
+<:-srcⁿ (S ∪ error) never p = CONTRADICTION (<:-impl-¬≮: p (<:-trans-≮: <:-∪-right error-≮:-never))
+<:-srcⁿ (S ∪ scalar T) never p = CONTRADICTION (<:-impl-¬≮: p (<:-trans-≮: <:-∪-right (scalar-≮:-never T)))
+<:-srcⁿ (S ∪ error) (U ⇒ V) p = CONTRADICTION (<:-impl-¬≮: p (<:-trans-≮: <:-∪-right (error-≮:-fun (U ⇒ V))))
+<:-srcⁿ (S ∪ scalar T) (U ⇒ V) p = CONTRADICTION (<:-impl-¬≮: p (<:-trans-≮: <:-∪-right (scalar-≮:-function T)))
+<:-srcⁿ (S ∪ error) (G ∩ H) p = CONTRADICTION (<:-impl-¬≮: p (<:-trans-≮: <:-∪-right (error-≮:-fun (G ∩ H))))
+<:-srcⁿ (S ∪ scalar T) (G ∩ H) p = CONTRADICTION (<:-impl-¬≮: p (<:-trans-≮: <:-∪-right (scalar-≮:-fun (G ∩ H) T)))
+<:-srcⁿ (S ⇒ T) (U ⇒ V) p = <:-srcᶠ (S ⇒ T) (U ⇒ V) p
+<:-srcⁿ (S ⇒ T) (G ∩ H) p = <:-srcᶠ (S ⇒ T) (G ∩ H) p
+<:-srcⁿ (E ∩ F) (U ⇒ V) p = <:-srcᶠ (E ∩ F) (U ⇒ V) p
+<:-srcⁿ (E ∩ F) (G ∩ H) p = <:-srcᶠ (E ∩ F) (G ∩ H) p
+
+<:-src : ∀ T U → T <: U → src U <: src T
+<:-src T U T<:U = <:-srcⁿ (normal T) (normal U) (<:-trans (normalize-<: T) (<:-trans T<:U (<:-normalize U)))
+
 -- Properties of resolve
 resolveˢ-<:-⇒ : ∀ {F V U} → (FunType F) → (Saturated F) → (FunType (V ⇒ U)) → (r : Resolved F V) → (F <: (V ⇒ U)) → (target r <: U)
 resolveˢ-<:-⇒ Fᶠ Fˢ V⇒Uᶠ r F<:V⇒U with <:-impl-<:ᵒ Fᶠ Fˢ V⇒Uᶠ F<:V⇒U here
@@ -124,8 +172,8 @@ resolveˢ-<:-⇒ Fᶠ Fˢ V⇒Uᶠ (yes Sʳ Tʳ oʳ V<:Sʳ tgtʳ) F<:V⇒U | def
 resolveˢ-<:-⇒ Fᶠ Fˢ V⇒Uᶠ (no tgtʳ) F<:V⇒U | defn o o₁ o₂ = CONTRADICTION (<:-impl-¬≮: o₁ (tgtʳ o))
 
 resolveⁿ-<:-⇒ : ∀ {F} → (Fⁿ : Normal F) → ∀ V U → (F <: (V ⇒ U)) → (resolveⁿ Fⁿ V <: U)
-resolveⁿ-<:-⇒ (S ⇒ T) V U F<:V⇒U = resolveˢ-<:-⇒ (normal-saturate (S ⇒ T)) (saturated (S ⇒ T)) (V ⇒ U) (resolveˢ (normal-saturate (S ⇒ T)) (saturated (S ⇒ T)) V (λ o → o)) F<:V⇒U
-resolveⁿ-<:-⇒ (Fⁿ ∩ Gⁿ) V U F<:V⇒U = resolveˢ-<:-⇒ (normal-saturate (Fⁿ ∩ Gⁿ)) (saturated (Fⁿ ∩ Gⁿ)) (V ⇒ U) (resolveˢ (normal-saturate (Fⁿ ∩ Gⁿ)) (saturated (Fⁿ ∩ Gⁿ)) V (λ o → o)) (<:-trans (saturate-<: (Fⁿ ∩ Gⁿ)) F<:V⇒U)
+resolveⁿ-<:-⇒ (S ⇒ T) V U F<:V⇒U = resolveˢ-<:-⇒ (normal-saturate (S ⇒ T)) (saturated (S ⇒ T)) (V ⇒ U) (resolveToˢ (normal-saturate (S ⇒ T)) (saturated (S ⇒ T)) V (λ o → o)) F<:V⇒U
+resolveⁿ-<:-⇒ (Fⁿ ∩ Gⁿ) V U F<:V⇒U = resolveˢ-<:-⇒ (normal-saturate (Fⁿ ∩ Gⁿ)) (saturated (Fⁿ ∩ Gⁿ)) (V ⇒ U) (resolveToˢ (normal-saturate (Fⁿ ∩ Gⁿ)) (saturated (Fⁿ ∩ Gⁿ)) V (λ o → o)) (<:-trans (saturate-<: (Fⁿ ∩ Gⁿ)) F<:V⇒U)
 resolveⁿ-<:-⇒ (Sⁿ ∪ scalar s) V U F<:V⇒U = CONTRADICTION (<:-impl-¬≮: F<:V⇒U (<:-trans-≮: <:-∪-right (scalar-≮:-function s)))
 resolveⁿ-<:-⇒ (Sⁿ ∪ error) V U F<:V⇒U = CONTRADICTION (<:-impl-¬≮: F<:V⇒U (<:-trans-≮: <:-∪-right (witness error function-error)))
 resolveⁿ-<:-⇒ never V U F<:V⇒U = <:-never
@@ -143,7 +191,7 @@ resolve-≮:-⇒ {F} {V} {U} FV≮:U | Right F<:V⇒U = CONTRADICTION (<:-impl-�
 <:-resolveˢ-⇒ (no _) V<:S = <:-any
 
 <:-resolveⁿ-⇒ : ∀ S T V → (V <: S) → T <: resolveⁿ (S ⇒ T) V
-<:-resolveⁿ-⇒ S T V V<:S = <:-resolveˢ-⇒ (resolveˢ (S ⇒ T) (saturated (S ⇒ T)) V (λ o → o)) V<:S 
+<:-resolveⁿ-⇒ S T V V<:S = <:-resolveˢ-⇒ (resolveToˢ (S ⇒ T) (saturated (S ⇒ T)) V (λ o → o)) V<:S 
 
 <:-resolve-⇒ : ∀ {S T V} → (V <: S) → T <: resolve (S ⇒ T) V
 <:-resolve-⇒ {S} {T} {V} V<:S = <:-resolveⁿ-⇒ S T V V<:S
@@ -157,8 +205,8 @@ resolve-≮:-⇒ {F} {V} {U} FV≮:U | Right F<:V⇒U = CONTRADICTION (<:-impl-�
 
 <:-resolveᶠ : ∀ {F G} → (Fᶠ : FunType F) → (Gᶠ : FunType G) → ∀ V W → (F <: G) → (V <: W) → resolveᶠ Fᶠ V <: resolveᶠ Gᶠ W
 <:-resolveᶠ Fᶠ Gᶠ V W F<:G V<:W = <:-resolveˢ
-  (resolveˢ (normal-saturate Fᶠ) (saturated Fᶠ) V (λ o → o))
-  (resolveˢ (normal-saturate Gᶠ) (saturated Gᶠ) W (λ o → o))
+  (resolveToˢ (normal-saturate Fᶠ) (saturated Fᶠ) V (λ o → o))
+  (resolveToˢ (normal-saturate Gᶠ) (saturated Gᶠ) W (λ o → o))
   (<:-impl-<:ᵒ (normal-saturate Fᶠ) (saturated Fᶠ) (normal-saturate Gᶠ) (<:-trans (saturate-<: Fᶠ) (<:-trans F<:G (<:-saturate Gᶠ))))
   V<:W
 

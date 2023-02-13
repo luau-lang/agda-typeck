@@ -308,9 +308,18 @@ function-<:-funktion = <:-function (λ ()) (λ p → any)
 function-<:-unknown : ∀ {S T} → (S ⇒ T) <: unknown
 function-<:-unknown p = left (left (left (left (function-<:-funktion p))))
 
+error-≮:-function : ∀ {S T} → error ≮: (S ⇒ T)
+error-≮:-function = witness error function-error
+
 -- Properties of scalars
 scalar-<: : ∀ S {T} → Language T ⟨ scalar S ⟩ → (scalar S <: T)
 scalar-<: S p (scalar S) = p
+
+scalar-<:-unknown : ∀ {S} → (scalar S <: unknown)
+scalar-<:-unknown {NUMBER} p = left (left (left (right p)))
+scalar-<:-unknown {BOOLEAN} p = right p
+scalar-<:-unknown {STRING} p = left (left (right p))
+scalar-<:-unknown {NIL} p = left (right p)
 
 function-∩-scalar-<:-never : ∀ S {T U V} → ((T ⇒ U) ∩ scalar S) <: V
 function-∩-scalar-<:-never S (() , scalar S)
@@ -323,6 +332,9 @@ scalar-∩-error-<:-never S (() , error)
 
 function-≮:-scalar : ∀ {S T} U → ((S ⇒ T) ≮: scalar U)
 function-≮:-scalar S = witness (function-ok {t = ⟨⟩} diverge) (scalar-function S)
+
+error-≮:-scalar : ∀ S → (error ≮: scalar S)
+error-≮:-scalar S = witness error (scalar-error S)
 
 scalar-≮:-function : ∀ {S T} U → (scalar U ≮: (S ⇒ T))
 scalar-≮:-function S = witness (scalar S) (function-scalar S)
