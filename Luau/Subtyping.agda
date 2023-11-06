@@ -17,7 +17,6 @@ data Value : Set
 data TypedValue where
 
   scalar : Scalar → TypedValue
-  warning : Value → TypedValue
   _↦_ : Arguments → Result → TypedValue
 
 data Arguments where
@@ -29,9 +28,10 @@ data Arguments where
 
 data Result where
 
-  -- The effects we're tracking are causing a runtime error, a typecheck warning,
+  -- The effects we're tracking are causing a runtime error, an argument check failing,
   -- or diverging
   error : Result
+  check : Result
   diverge : Result
   ⟨_⟩ : TypedValue → Result
 
@@ -46,13 +46,14 @@ data RLanguage : Type → Result → Set
 data ¬RLanguage : Type → Result → Set
 data ALanguage : Type → Arguments → Set
 data ¬ALanguage : Type → Arguments → Set
+data ¬NoneCheck : Arguments → Result → Set
 
 data Language where
 
   scalar : ∀ T → Language (scalar T) ⟨ scalar T ⟩
   function-nok : ∀ {T U t u} → (¬ALanguage T t) → Language (T ⇒ U) ⟨ t ↦ u ⟩
   function-ok : ∀ {T U t u} → (RLanguage U u) → Language (T ⇒ U) ⟨ t ↦ u ⟩
-  function-warning : ∀ {T U t} → (¬Language T t) → Language (T ⇒ U) ⟨ warning t ⟩
+  function-none-check : ∀ {T U} → Language (T ⇒ U) ⟨ ⟨⟩ ↦ check ⟩
   left : ∀ {T U t} → Language T t → Language (T ∪ U) t
   right : ∀ {T U u} → Language U u → Language (T ∪ U) u
   _,_ : ∀ {T U t} → Language T t → Language U t → Language (T ∩ U) t
@@ -63,11 +64,9 @@ data ¬Language where
 
   scalar-scalar : ∀ S T → (S ≢ T) → ¬Language (scalar T) ⟨ scalar S ⟩
   scalar-function : ∀ S {t u} → ¬Language (scalar S) ⟨ t ↦ u ⟩
-  scalar-warning : ∀ {T t} → ¬Language (scalar T) ⟨ warning t ⟩
   scalar-error : ∀ S → ¬Language (scalar S) error
   function-scalar : ∀ S {T U} → ¬Language (T ⇒ U) ⟨ scalar S ⟩
-  function-function : ∀ {T U t u} → (ALanguage T t) → (¬RLanguage U u) → ¬Language (T ⇒ U) ⟨ t ↦ u ⟩
-  function-warning : ∀ {T U t} → Language T t → ¬Language (T ⇒ U) ⟨ warning t ⟩
+  function-function : ∀ {T U t u} → (ALanguage T t) → (¬RLanguage U u) → (¬NoneCheck t u) → ¬Language (T ⇒ U) ⟨ t ↦ u ⟩
   function-error : ∀ {T U} → ¬Language (T ⇒ U) error
   _,_ : ∀ {T U t} → ¬Language T t → ¬Language U t → ¬Language (T ∪ U) t
   left : ∀ {T U t} → ¬Language T t → ¬Language (T ∩ U) t
@@ -84,6 +83,7 @@ data RLanguage where
 data ¬RLanguage where
 
   error : ∀ {T} → ¬Language T error → ¬RLanguage T error
+  check : ∀ {T} → ¬RLanguage T check
   one : ∀ {T t} → ¬Language T ⟨ t ⟩ → ¬RLanguage T ⟨ t ⟩
 
 data ALanguage where
@@ -97,6 +97,14 @@ data ¬ALanguage where
   untyped : ∀ {T} → ¬Language T error → ¬ALanguage T ⟨untyped⟩
   one : ∀ {T t} → ¬Language T ⟨ t ⟩ → ¬ALanguage T ⟨ t ⟩
 
+data ¬NoneCheck where
+
+  one₁ : ∀ {t u} → ¬NoneCheck ⟨ t ⟩ u
+  one₂ : ∀ {t u} → ¬NoneCheck t ⟨ u ⟩
+  error : ∀ {t} → ¬NoneCheck t error
+  diverge : ∀ {t} → ¬NoneCheck t diverge
+  untyped : ∀ {u} → ¬NoneCheck ⟨untyped⟩ u
+  
 -- Subtyping as language inclusion
 
 _<:_ : Type → Type → Set
