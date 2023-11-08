@@ -4,7 +4,7 @@ module Properties.ResolveOverloads where
 
 open import FFI.Data.Either using (Left; Right)
 open import Luau.ResolveOverloads using (Resolved; src; srcⁿ; resolve; resolveⁿ; resolveᶠ; resolveToˢ; target; yes; no)
-open import Luau.Subtyping using (_<:_; _≮:_; Language; ¬Language; witness; scalar; any; never; function-ok; function-nok; function-scalar; function-warning; function-error; function-function; scalar-scalar; scalar-function; scalar-warning; scalar-error; _,_; left; right; _↦_; ⟨⟩; ⟨_⟩; warning; diverge; error; untyped; none; one)
+open import Luau.Subtyping using (_<:_; _≮:_; Language; ¬Language; Value; TypedValue; witness; scalar; any; never; function-ok; function-nok; function-scalar; function-none-check; function-error; function-function; scalar-scalar; scalar-function; scalar-warning; scalar-error; _,_; left; right; _↦_; ⟨⟩; ⟨_⟩; warning; diverge; error; check; untyped; none; one; one₁; one₂; ⟨untyped⟩)
 open import Luau.Type using (Type ; Scalar; _⇒_; _∩_; _∪_; scalar; any; never; error; unknown; NUMBER; BOOLEAN; NIL; STRING)
 open import Luau.TypeSaturation using (saturate)
 open import Luau.TypeNormalization using (normalize)
@@ -15,43 +15,57 @@ open import Properties.Subtyping using (<:-refl; <:-trans; <:-trans-≮:; ≮:-t
 open import Properties.TypeNormalization using (Normal; FunType; normal; _⇒_; _∩_; _∪_; never; scalar; error; <:-normalize; normalize-<:; fun-≮:-never; scalar-≮:-fun; error-≮:-fun)
 open import Properties.TypeSaturation using (Overloads; Saturated; _⊆ᵒ_; _<:ᵒ_; normal-saturate; saturated; <:-saturate; saturate-<:; defn; here; left; right)
 
+warning : Value → TypedValue
+warning error = ⟨untyped⟩ ↦ check
+warning ⟨ t ⟩ = ⟨ t ⟩ ↦ check
+
 -- Properties of src
 function-err-srcⁿ : ∀ {T t} → (FunType T) → (¬Language (srcⁿ T) t) → Language T ⟨ warning t ⟩
-function-err-srcⁿ (S ⇒ T) p = function-warning p
+function-err-srcⁿ {t = error} (S ⇒ T) p = function-nok (untyped p)
+function-err-srcⁿ {t = ⟨ t ⟩} (S ⇒ T) p = function-nok (one p)
 function-err-srcⁿ (S ∩ T) (p₁ , p₂) = (function-err-srcⁿ S p₁ , function-err-srcⁿ T p₂)
 
 ¬function-err-srcᶠ : ∀ {T t} → (FunType T) → (Language (srcⁿ T) t) → ¬Language T ⟨ warning t ⟩
-¬function-err-srcᶠ (S ⇒ T) p = function-warning p
+¬function-err-srcᶠ {t = error} (S ⇒ T) p = function-function (untyped p) check untyped
+¬function-err-srcᶠ {t = ⟨ t ⟩} (S ⇒ T) p = function-function (one p) check one₁
 ¬function-err-srcᶠ (S ∩ T) (left p) = left (¬function-err-srcᶠ S p)
 ¬function-err-srcᶠ (S ∩ T) (right p) = right (¬function-err-srcᶠ T p)
 
 ¬function-err-srcⁿ : ∀ {T t} → (Normal T) → (Language (srcⁿ T) t) → ¬Language T ⟨ warning t ⟩
 ¬function-err-srcⁿ never p = never
-¬function-err-srcⁿ (S ⇒ T) p = function-warning p
+¬function-err-srcⁿ {t = error} (S ⇒ T) p = function-function (untyped p) check untyped
+¬function-err-srcⁿ {t = ⟨ t ⟩} (S ⇒ T) p = function-function (one p) check one₁
 ¬function-err-srcⁿ (S ∩ T) (left p) = left (¬function-err-srcᶠ S p)
 ¬function-err-srcⁿ (S ∩ T) (right p) = right (¬function-err-srcᶠ T p)
 
 ¬function-err-src : ∀ {T t} → (Language (src T) t) → ¬Language T ⟨ warning t ⟩
-¬function-err-src {T = S ⇒ T} p = function-warning p
-¬function-err-src {T = scalar s} p = scalar-warning
+¬function-err-src {T = S ⇒ T} {t = error} p = function-function (untyped p) check untyped
+¬function-err-src {T = S ⇒ T} {t = ⟨ t ⟩} p = function-function (one p) check one₁
+¬function-err-src {T = scalar s} {t = error} p = scalar-function s
+¬function-err-src {T = scalar s} {t = ⟨ t ⟩} p = scalar-function s
 ¬function-err-src {T = S ∪ T} p = <:-impl-⊇ (<:-normalize (S ∪ T)) (¬function-err-srcⁿ (normal (S ∪ T)) p)
 ¬function-err-src {T = S ∩ T} p = <:-impl-⊇ (<:-normalize (S ∩ T)) (¬function-err-srcⁿ (normal (S ∩ T)) p)
 ¬function-err-src {T = never} p = never
 
 src-¬function-errᶠ : ∀ {T t} → (FunType T) → Language T ⟨ warning t ⟩ → (¬Language (srcⁿ T) t)
 src-¬function-errᶠ (S ∩ T) (p₁ , p₂) = (src-¬function-errᶠ S p₁ , src-¬function-errᶠ T p₂)
-src-¬function-errᶠ (S ⇒ T) (function-warning p) = p
+src-¬function-errᶠ {t = error} (S ⇒ T) (function-nok (untyped p)) = p
+src-¬function-errᶠ {t = ⟨ t ⟩} (S ⇒ T) (function-nok (one p)) = p
 
 src-¬function-errⁿ : ∀ {T t} → (Normal T) → Language T ⟨ warning t ⟩ → (¬Language (srcⁿ T) t)
-src-¬function-errⁿ (S ⇒ T) (function-warning p) = p
+src-¬function-errⁿ {t = error} (S ⇒ T) (function-nok (untyped p)) = p
+src-¬function-errⁿ {t = ⟨ t ⟩} (S ⇒ T) (function-nok (one p)) = p
 src-¬function-errⁿ (S ∩ T) (p₁ , p₂) = (src-¬function-errᶠ S p₁ , src-¬function-errᶠ T p₂)
 src-¬function-errⁿ (S ∪ T) p = never
 
 src-¬function-err : ∀ {T t} → Language T ⟨ warning t ⟩ → (¬Language (src T) t)
-src-¬function-err {T = S ⇒ T} (function-warning p) = p
+src-¬function-err {T = S ⇒ T} {t = error} (function-nok (untyped p)) = p
+src-¬function-err {T = S ⇒ T} {t = ⟨ t ⟩} (function-nok (one p)) = p
 src-¬function-err {T = any} p = never
 src-¬function-err {T = S ∪ T} p = src-¬function-errⁿ (normal (S ∪ T)) (<:-normalize (S ∪ T) p)
 src-¬function-err {T = S ∩ T} p = src-¬function-errⁿ (normal (S ∩ T)) (<:-normalize (S ∩ T) p)
+src-¬function-err {T = scalar s} {t = error} ()
+src-¬function-err {T = scalar s} {t = ⟨ t ⟩} ()
 
 src-function-errᶠ : ∀ {F t} → (FunType F) → ¬Language F ⟨ warning t ⟩ → (Language (srcⁿ F) t)
 src-function-errᶠ {F} {t} Fᶠ p with dec-language (srcⁿ F) t
@@ -68,7 +82,7 @@ fun-¬scalar s (S ∩ T) = left (fun-¬scalar s S)
 ¬fun-scalar s (S ⇒ T) (function-ok (error x)) = scalar-function s
 ¬fun-scalar s (S ⇒ T) (function-ok diverge) = scalar-function s
 ¬fun-scalar s (S ⇒ T) (function-ok (one p)) = scalar-function s
-¬fun-scalar s (S ⇒ T) (function-warning p) = scalar-warning
+¬fun-scalar s (S ⇒ T) function-none-check = scalar-function s
 ¬fun-scalar s (S ∩ T) (p₁ , p₂) = ¬fun-scalar s T p₂
 
 fun-function : ∀ {T} → FunType T → Language T ⟨ ⟨⟩ ↦ diverge ⟩
@@ -87,22 +101,26 @@ src-¬scalar {T = T ∩ U} s p = srcⁿ-¬scalar s (normal (T ∩ U)) (<:-normal
 
 srcⁿ-any-≮: : ∀ {T U} → (Normal U) → (T ≮: srcⁿ U) → (U ≮: (T ⇒ any))
 srcⁿ-any-≮: never (witness p q) = CONTRADICTION (language-comp q any)
-srcⁿ-any-≮: (U ⇒ V) (witness p q) = witness (function-warning q) (function-warning p)
-srcⁿ-any-≮: (U ∩ V) (witness p q) = witness (function-err-srcⁿ (U ∩ V) q) (function-warning p)
+srcⁿ-any-≮: (U ⇒ V) (witness {t = error} p q) = witness (function-nok (untyped q))(function-function (untyped p) check untyped)
+srcⁿ-any-≮: (U ⇒ V) (witness {t = ⟨ t ⟩} p q) = witness (function-nok (one q)) (function-function (one p) check one₁)
+srcⁿ-any-≮: (U ∩ V) (witness {t = error} p q) = witness (function-err-srcⁿ (U ∩ V) q) (function-function (untyped p) check untyped)
+srcⁿ-any-≮: (U ∩ V) (witness {t = ⟨ t ⟩} p q) = witness (function-err-srcⁿ (U ∩ V) q) (function-function (one p) check one₁)
 srcⁿ-any-≮: (U ∪ scalar s) (witness p q) = witness (right (scalar s)) (function-scalar s)
 srcⁿ-any-≮: (U ∪ error) (witness p q) = witness (right error) function-error
 
 src-any-≮: : ∀ {T U} → (T ≮: src U) → (U ≮: (T ⇒ any))
-src-any-≮: {U = T ⇒ U} (witness p q) = witness (function-warning q) (function-warning p)
+src-any-≮: {U = T ⇒ U} (witness {t = error} p q) = witness (function-nok (untyped q)) (function-function (untyped p) check untyped)
+src-any-≮: {U = T ⇒ U} (witness {t = ⟨ t ⟩} p q) = witness (function-nok (one q)) (function-function (one p) check one₁)
 src-any-≮: {U = never} (witness p q) = CONTRADICTION (language-comp q any)
-src-any-≮: {U = any} (witness p q) = witness any (function-warning p)
+src-any-≮: {U = any} (witness p q) = witness any function-error
 src-any-≮: {U = scalar s} (witness p q) = witness (scalar s) (function-scalar s)
 src-any-≮: {U = T ∪ U} p = <:-trans-≮: (normalize-<: (T ∪ U)) (srcⁿ-any-≮: (normal (T ∪ U)) p)
 src-any-≮: {U = T ∩ U} p = <:-trans-≮: (normalize-<: (T ∩ U)) (srcⁿ-any-≮: (normal (T ∩ U)) p)
 src-any-≮: {U = error} (witness p q) = witness error function-error
 
 srcᶠ-warning : ∀ {T t} → FunType T → Language T ⟨ warning t ⟩ → ¬Language (srcⁿ T) t
-srcᶠ-warning (S ⇒ T) (function-warning p) = p
+srcᶠ-warning {t = error} (S ⇒ T) (function-nok (untyped p)) = p
+srcᶠ-warning {t = ⟨ t ⟩} (S ⇒ T) (function-nok (one p)) = p
 srcᶠ-warning (F ∩ G) (p , q) = (srcᶠ-warning F p , srcᶠ-warning G q)
 
 srcⁿ-warning : ∀ {T t} → Normal T → Language T ⟨ warning t ⟩ → ¬Language (srcⁿ T) t
@@ -116,8 +134,8 @@ src-warning {T} p = srcⁿ-warning (normal T) (<:-normalize T p)
 
 any-src-≮: : ∀ {S T U} → (U ≮: S) → (T <: unknown) → (T ≮: (U ⇒ any)) → (U ≮: src T)
 any-src-≮: (witness p _) _ (witness q (function-scalar s)) = witness p (src-¬scalar s q)
-any-src-≮: _ _ (witness _ (function-function _ (one ())))
-any-src-≮: _ _ (witness p (function-warning q)) = witness q (src-warning p)
+-- any-src-≮: _ _ (witness _ (function-function _ (one ())))
+-- any-src-≮: _ _ (witness p (function-warning q)) = witness q (src-warning p)
 any-src-≮: _ p (witness q function-error) = CONTRADICTION (language-comp ((((function-error , scalar-error NUMBER) ,
                                                                               scalar-error STRING)
                                                                              , scalar-error NIL)

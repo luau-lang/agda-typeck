@@ -5,7 +5,7 @@ module Luau.ErrorSuppression where
 open import Agda.Builtin.Unit using (⊤)
 open import FFI.Data.Either using (Either; Left; Right; mapL; mapR; mapLR; swapLR; cond)
 open import Luau.Type using (Type; unknown; never; any; error; funktion; scalar; _⇒_; _∪_; _∩_)
-open import Luau.Subtyping using (Value; TypedValue; Arguments; Result; Language; ¬Language; _<:_; _≮:_; ⟨_⟩; _↦_; warning; witness; ⟨untyped⟩; error; diverge; scalar; ⟨⟩)
+open import Luau.Subtyping using (Value; TypedValue; Arguments; Result; Language; ¬Language; _<:_; _≮:_; ⟨_⟩; _↦_; check; witness; ⟨untyped⟩; error; diverge; scalar; ⟨⟩)
 open import Properties.Contradiction using (¬; ⊥)
 open import Properties.Product using (_×_)
 
@@ -21,7 +21,6 @@ SuppressedValue T ⟨ t ⟩ = SuppressedTypedValue T t
 
 SuppressedTypedValue (scalar S) t = ⊥
 SuppressedTypedValue (S ⇒ T) (scalar s) = ⊥
-SuppressedTypedValue (S ⇒ T) (warning s) = SuppressedValue S s
 SuppressedTypedValue (S ⇒ T) (s ↦ t) = Either (SuppressedArguments S s) (SuppressedResult T t)
 SuppressedTypedValue never t = ⊥
 SuppressedTypedValue any t = ⊤
@@ -35,6 +34,7 @@ SuppressedArguments T ⟨ t ⟩ = SuppressedTypedValue T t
 
 SuppressedResult T error = Language T error
 SuppressedResult T diverge = ⊥
+SuppressedResult T check = ⊥
 SuppressedResult T ⟨ t ⟩ = SuppressedTypedValue T t
 
 -- A subtyping failure which should not be suppressed

@@ -4,7 +4,7 @@ module Luau.StrictMode.ToString where
 
 open import Agda.Builtin.Nat using (Nat; suc)
 open import FFI.Data.String using (String; _++_)
-open import Luau.Subtyping using (_≮:_; TypedValue; error; witness; scalar; warning; diverge; ⟨untyped⟩; function-ok; function-warning; _↦_; ⟨⟩; ⟨_⟩)
+open import Luau.Subtyping using (_≮:_; TypedValue; error; witness; scalar; check; diverge; ⟨untyped⟩; function-ok; _↦_; ⟨⟩; ⟨_⟩)
 open import Luau.StrictMode using (Warningᴱ; Warningᴮ; UnallocatedAddress; UnboundVariable; FunctionCallMismatch; FunctionDefnMismatch; BlockMismatch; app₁; app₂; BinOpMismatch₁; BinOpMismatch₂; bin₁; bin₂; block₁; return; LocalVarMismatch; local₁; local₂; function₁; function₂; heap; expr; block; addr; NotFunctionCall; UnsafeFunction; UnsafeBlock; UnsafeLocal)
 open import Luau.Syntax using (Expr; val; yes; var; var_∈_; _⟨_⟩∈_; _$_; addr; num; binexp; nil; function_is_end; block_is_end; done; return; local_←_; _∙_; fun; arg; name)
 open import Luau.Type using (NUMBER; BOOLEAN; STRING; NIL; _⇒_)
@@ -29,13 +29,14 @@ valueToString (scalar STRING) n v = v ++ " is a string"
 valueToString (scalar NIL) n v = v ++ " is nil"
 valueToString (⟨ s ⟩ ↦ ⟨ t ⟩) n v = valueToString t (suc n) (v ++ "(" ++ w ++ ")") ++ " when\n  " ++ valueToString s (suc n) w where w = tmp n
 valueToString (⟨⟩ ↦ ⟨ t ⟩) n v = valueToString t n (v ++ "()")
-valueToString (warning ⟨ t ⟩) n v = v ++ "(" ++ w ++ ") can error when\n  " ++ valueToString t (suc n) w where w = tmp n
-valueToString (warning error) n v = v ++ "(" ++ w ++ ") can error when\n  " ++ w ++ " is untyped" where w = tmp n
+valueToString (⟨⟩ ↦ check) n v = v ++ "() can check that an argument is provided"
 valueToString (⟨⟩ ↦ error) n v = v ++ "() can error"
 valueToString (⟨⟩ ↦ diverge) n v = v ++ "() can diverge"
+valueToString (⟨untyped⟩ ↦ check) n v = v ++ "(" ++ w ++ ") can fail a check when\n  " ++ w ++ " is untyped" where w = tmp n
 valueToString (⟨untyped⟩ ↦ error) n v = v ++ "(" ++ w ++ ") can error when\n  " ++ w ++ " is untyped" where w = tmp n
 valueToString (⟨untyped⟩ ↦ diverge) n v = v ++ "(" ++ w ++ ") can diverge when\n  " ++ w ++ " is untyped" where w = tmp n
 valueToString (⟨untyped⟩ ↦ ⟨ t ⟩) n v = valueToString t (suc n) (v ++ "(" ++ w ++ ")") ++ " when\n  " ++ w ++ " is untyped" where w = tmp n
+valueToString (⟨ s ⟩ ↦ check) n v = v ++ "(" ++ w ++ ")" ++ "can fail a check when\n  " ++ valueToString s (suc n) w where w = tmp n
 valueToString (⟨ s ⟩ ↦ error) n v = v ++ "(" ++ w ++ ")" ++ "can error when\n  " ++ valueToString s (suc n) w where w = tmp n
 valueToString (⟨ s ⟩ ↦ diverge) n v = v ++ "(" ++ w ++ ")" ++ "can diverge when\n  " ++ valueToString s (suc n) w where w = tmp n
 
