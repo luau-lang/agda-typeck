@@ -4,7 +4,7 @@ module Properties.ResolveOverloads where
 
 open import FFI.Data.Either using (Left; Right)
 open import Luau.ResolveOverloads using (Resolved; src; srcⁿ; resolve; resolveⁿ; resolveᶠ; resolveToˢ; target; yes; no)
-open import Luau.Subtyping using (_<:_; _≮:_; Language; ¬Language; Value; TypedValue; witness; scalar; any; never; function-ok; function-nok; function-scalar; function-none-check; function-error; function-function; scalar-scalar; scalar-function; scalar-warning; scalar-error; _,_; left; right; _↦_; ⟨⟩; ⟨_⟩; warning; diverge; error; check; untyped; none; one; one₁; one₂; ⟨untyped⟩)
+open import Luau.Subtyping using (_<:_; _≮:_; Language; ¬Language; Value; TypedValue; witness; scalar; any; never; function-ok; function-nok; function-scalar; function-none-check; function-error; function-function; scalar-scalar; scalar-function; scalar-error; _,_; left; right; _↦_; ⟨⟩; ⟨_⟩; diverge; error; check; untyped; none; one; one₁; one₂; ⟨untyped⟩)
 open import Luau.Type using (Type ; Scalar; _⇒_; _∩_; _∪_; scalar; any; never; error; unknown; NUMBER; BOOLEAN; NIL; STRING)
 open import Luau.TypeSaturation using (saturate)
 open import Luau.TypeNormalization using (normalize)
@@ -134,8 +134,8 @@ src-warning {T} p = srcⁿ-warning (normal T) (<:-normalize T p)
 
 any-src-≮: : ∀ {S T U} → (U ≮: S) → (T <: unknown) → (T ≮: (U ⇒ any)) → (U ≮: src T)
 any-src-≮: (witness p _) _ (witness q (function-scalar s)) = witness p (src-¬scalar s q)
--- any-src-≮: _ _ (witness _ (function-function _ (one ())))
--- any-src-≮: _ _ (witness p (function-warning q)) = witness q (src-warning p)
+any-src-≮: _ _ (witness p (function-function (one q) check one₁)) = witness q (src-warning p)
+any-src-≮: _ _ (witness p (function-function (untyped q) check untyped)) = witness q (src-warning p)
 any-src-≮: _ p (witness q function-error) = CONTRADICTION (language-comp ((((function-error , scalar-error NUMBER) ,
                                                                               scalar-error STRING)
                                                                              , scalar-error NIL)
