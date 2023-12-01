@@ -30,11 +30,11 @@ jobs:
         cabal install --allow-newer Agda-${{ matrix.agda }}
     - name: check targets
       run: |
-        ~/.cabal/bin/agda Everything.agda
+        ~/.local/bin/agda Everything.agda
     - name: build executables
       run: |
-        ~/.cabal/bin/agda --compile PrettyPrinter.agda
-        ~/.cabal/bin/agda --compile Interpreter.agda
+        ~/.local/bin/agda --compile PrettyPrinter.agda
+        ~/.local/bin/agda --compile Interpreter.agda
     - name: clone Luau
       uses: actions/checkout@v2
       with:
