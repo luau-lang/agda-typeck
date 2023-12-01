@@ -10,9 +10,9 @@ jobs:
   linux:
     strategy:
       matrix:
-        agda: [2.6.2.2]
-        hackageDate: ["2022-12-08"]
-        hackageTime: ["00:41:16"]
+        agda: [2.6.4]
+        hackageDate: ["2023-12-01"]
+        hackageTime: ["20:29:20"]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
