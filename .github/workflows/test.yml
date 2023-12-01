@@ -26,7 +26,7 @@ jobs:
       run: cabal v2-update "hackage.haskell.org,${{ matrix.hackageDate }}T${{ matrix.hackageTime }}Z"
     - name: cabal install
       run: |
-        cabal install --lib scientific vector aeson --package-env .
+        cabal install --lib text scientific vector aeson --package-env .
         cabal install --allow-newer Agda-${{ matrix.agda }}
     - name: check targets
       run: |
