@@ -95,7 +95,7 @@ def build_suite(root, suite):
     if entry_point is None:
         return (False, "Invalid suite")
     
-    result = subprocess.run(["~/.cabal/bin/agda", "--compile", entry_point], shell=True, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    result = subprocess.run(["~/.local/bin/agda", "--compile", entry_point], shell=True, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if result.returncode == 0:
         return (True, None)
     else:
